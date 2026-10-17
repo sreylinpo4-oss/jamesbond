@@ -1,7 +1,10 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 const products = [
   {
@@ -43,9 +46,27 @@ const products = [
 ];
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<{ [id: number]: number }>({});
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const filteredProducts = useMemo(
     () =>
@@ -86,6 +107,15 @@ export default function Home() {
           <a href="#home">Home</a>
           <a href="#shop">Shop</a>
           <a href="#about">Our Story</a>
+          {user ? (
+            <Link href="/account" className="nav-auth-link">
+              My Account
+            </Link>
+          ) : (
+            <Link href="/auth/login" className="nav-auth-link">
+              Sign In
+            </Link>
+          )}
         </nav>
         <a className="bag" href="#cart">
           ♡ Bag ({cartCount})
@@ -217,16 +247,26 @@ export default function Home() {
             <p className="cart-note">
               Delivery fees and final payment will be confirmed at checkout.
             </p>
-            <button
-              className="primary-button checkout-button"
-              onClick={() =>
-                setNotice(
-                  "Checkout demo only. Real order and payment processing are not connected yet."
-                )
-              }
-            >
-              Proceed to checkout →
-            </button>
+            {user ? (
+              <button
+                className="primary-button checkout-button"
+                onClick={() =>
+                  setNotice(
+                    `Checkout simulated successfully for ${user.email ?? "your account"} ♡`
+                  )
+                }
+              >
+                Proceed to checkout →
+              </button>
+            ) : (
+              <Link
+                href="/auth/login?next=/#cart"
+                className="primary-button checkout-button"
+                style={{ textAlign: "center", textDecoration: "none" }}
+              >
+                Sign in to proceed to checkout →
+              </Link>
+            )}
           </>
         )}
 
