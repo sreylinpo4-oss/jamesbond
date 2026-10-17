@@ -236,7 +236,7 @@ export default function Home() {
       <footer>
         <a href="#home" className="logo">✿ Floralyn Skin</a>
         <p>A little care, a lot of glow.</p>
-        <small>© {new Date().getFullYear()} Floralyn Skin. All rights reserved.</small>
+
       </footer>
     </main>
   );
