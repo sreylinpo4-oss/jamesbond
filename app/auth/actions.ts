@@ -176,8 +176,11 @@ export async function onboardingAction(
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
       username,
-    avatar_url: user.user_metadata?.avatar_url || null,
-    role: "customer",
+    avatar_url:
+      user.user_metadata?.avatar_url ||
+      user.user_metadata?.picture ||
+      null,
+    role: "member",
   });
 
   if (profileError) {

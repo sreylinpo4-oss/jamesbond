@@ -163,6 +163,14 @@ insert into public.inventory (product_id, warehouse_id, quantity, low_stock_thre
 select id, 'main', 0, 12 from public.products
 on conflict (product_id, warehouse_id) do nothing;
 
+alter table public.profiles add column if not exists role text not null default 'member';
+alter table public.profiles drop constraint if exists profiles_role_check;
+update public.profiles set role = 'member' where role is null or role = 'customer';
+alter table public.profiles alter column role set default 'member';
+alter table public.profiles alter column role set not null;
+alter table public.profiles
+  add constraint profiles_role_check check (role in ('member', 'customer', 'admin'));
+
 create or replace function public.is_store_admin()
 returns boolean
 language sql
@@ -250,14 +258,23 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if new.role is distinct from old.role
-     and coalesce(auth.role(), '') <> 'service_role'
+  if coalesce(auth.role(), '') <> 'service_role'
      and session_user not in ('postgres', 'supabase_admin') then
-    raise exception 'Modifying user role is restricted';
+    if tg_op = 'INSERT' and new.role <> 'member' then
+      raise exception 'Modifying user role is restricted';
+    elsif tg_op = 'UPDATE' and new.role is distinct from old.role then
+      raise exception 'Modifying user role is restricted';
+    end if;
   end if;
   return new;
 end;
 $$;
+
+drop trigger if exists enforce_profile_role on public.profiles;
+create trigger enforce_profile_role
+  before insert or update on public.profiles
+  for each row
+  execute procedure public.prevent_role_change();
 
 create or replace function public.set_store_admin(p_user_id uuid, p_is_admin boolean)
 returns void
@@ -273,7 +290,7 @@ begin
   end if;
 
   update public.profiles
-  set role = case when p_is_admin then 'admin' else 'customer' end
+  set role = case when p_is_admin then 'admin' else 'member' end
   where id = p_user_id;
 
   if not found then

@@ -1,25 +1,43 @@
 -- ==============================================================================
 -- FLORALYN SKIN AUTHENTICATION SCHEMA
 -- Migration: 20261018000000_auth_schema.sql
--- Description: Creates the public.profiles table, RLS policies, automated triggers,
---              and secure helper functions for username/password and Google OAuth.
+-- Description: Creates / alters the public.profiles table, RLS policies,
+--              automated triggers, table grants, and secure helper functions.
 -- ==============================================================================
 
--- 1. Create public.profiles table
+-- 1. Create public.profiles table if it does not exist
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  username text unique not null,
-  display_name text,
-  avatar_url text,
-  role text not null default 'customer' check (role in ('customer', 'admin')),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint username_length check (char_length(username) >= 3 and char_length(username) <= 20),
-  constraint username_format check (username ~ '^[a-zA-Z0-9_]+$')
+  created_at timestamptz not null default now()
 );
 
+-- Ensure all required columns exist (even if table was created previously)
+alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists display_name text;
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists role text not null default 'member';
+alter table public.profiles add column if not exists updated_at timestamptz not null default now();
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+update public.profiles set role = 'member' where role is null or role = 'customer';
+alter table public.profiles alter column role set default 'member';
+alter table public.profiles alter column role set not null;
+alter table public.profiles
+  add constraint profiles_role_check check (role in ('member', 'customer', 'admin'));
+
+-- Ensure username constraint and index
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_username_format'
+  ) then
+    alter table public.profiles add constraint profiles_username_format check (username is null or (char_length(username) >= 3 and char_length(username) <= 20 and username ~ '^[a-zA-Z0-9_]+$'));
+  end if;
+end;
+$$;
+
 -- Case-insensitive unique index on lower(username)
-create unique index if not exists idx_profiles_username_lower on public.profiles (lower(username));
+create unique index if not exists idx_profiles_username_lower on public.profiles (lower(username)) where username is not null;
 
 -- 2. Enable Row Level Security (RLS)
 alter table public.profiles enable row level security;
@@ -45,15 +63,24 @@ create policy "Users can update their own profile"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
+-- Grant privileges to authenticated and anon roles
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on table public.profiles to authenticated;
+grant select on table public.profiles to anon;
+
 -- 3. Prevent Privilege Escalation on Role
 create or replace function public.prevent_role_change()
 returns trigger
 language plpgsql
 as $$
 begin
-  -- Prevent changing role column via standard client updates
-  if new.role is distinct from old.role then
-    raise exception 'Modifying user role is restricted';
+  if coalesce(auth.role(), '') <> 'service_role'
+     and session_user not in ('postgres', 'supabase_admin') then
+    if tg_op = 'INSERT' and new.role <> 'member' then
+      raise exception 'Modifying user role is restricted';
+    elsif tg_op = 'UPDATE' and new.role is distinct from old.role then
+      raise exception 'Modifying user role is restricted';
+    end if;
   end if;
   return new;
 end;
@@ -61,7 +88,7 @@ $$;
 
 drop trigger if exists enforce_profile_role on public.profiles;
 create trigger enforce_profile_role
-  before update on public.profiles
+  before insert or update on public.profiles
   for each row
   execute procedure public.prevent_role_change();
 
@@ -101,10 +128,13 @@ begin
       new.id,
       lower(trim(signup_username)),
       coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', trim(signup_username)),
-      new.raw_user_meta_data->>'avatar_url',
-      'customer'
+      coalesce(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture'),
+      'member'
     )
-    on conflict (id) do nothing;
+    on conflict (id) do update set
+      username = coalesce(public.profiles.username, excluded.username),
+      display_name = coalesce(public.profiles.display_name, excluded.display_name),
+      avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url);
   end if;
 
   return new;
@@ -159,3 +189,10 @@ begin
   );
 end;
 $$;
+
+-- Grant execute privileges on helper functions
+grant execute on function public.check_username_available(text) to anon, authenticated;
+grant execute on function public.get_email_by_username(text) to anon, authenticated;
+
+-- 8. Refresh PostgREST schema cache
+notify pgrst, 'reload schema';
