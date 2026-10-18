@@ -1,243 +1,457 @@
+﻿"use client";
 
-"use client";
-
+import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
-const products = [
-  {
-    id: 1,
-    name: "Gentle Facial Cleanser",
-    category: "Cleanser",
-    price: 12,
-    image:
-      "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?w=600",
-    description: "A gentle daily cleanse for fresh, soft skin.",
-  },
-  {
-    id: 2,
-    name: "Hydrating Glow Serum",
-    category: "Serum",
-    price: 18,
-    image:
-      "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=600",
-    description: "Lightweight hydration for a healthy-looking glow.",
-  },
-  {
-    id: 3,
-    name: "Daily Moisturizer",
-    category: "Moisturizer",
-    price: 15,
-    image:
-      "https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?w=600",
-    description: "Comforting moisture for your everyday routine.",
-  },
-  {
-    id: 4,
-    name: "Rose Skin Cream",
-    category: "Moisturizer",
-    price: 20,
-    image:
-      "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=600",
-    description: "A silky cream for a soft, nourished feeling.",
-  },
+import { addToCart, changeCartQuantity, getCart, getCartCount } from "@/lib/cart";
+import { categories, products, type Product } from "@/lib/products";
+
+const ritualHighlights = [
+    {
+        icon: "✦",
+        title: "Hydrate deeply",
+        description: "Plump, cushion, and comfort skin with barrier-loving formulas.",
+    },
+    {
+        icon: "❋",
+        title: "Calm the day",
+        description: "Soft botanicals help ease stress, redness, and afternoon fatigue.",
+    },
+    {
+        icon: "✿",
+        title: "Glow softly",
+        description: "Build a routine that looks fresh, rested, and naturally luminous.",
+    },
 ];
 
 export default function Home() {
-  const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<{ [id: number]: number }>({});
-  const [notice, setNotice] = useState("");
+    const [category, setCategory] = useState("All");
+    const [search, setSearch] = useState("");
+    const [cart, setCart] = useState<Record<number, number>>(() => getCart());
+    const [cartOpen, setCartOpen] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [notice, setNotice] = useState("");
 
-  const filteredProducts = useMemo(
-    () =>
-      products.filter((product) =>
-        product.name.toLowerCase().includes(search.toLowerCase())
-      ),
-    [search]
-  );
+    const filteredProducts = useMemo(() => {
+        return products.filter((product) => {
+            const matchesCategory =
+                category === "All" || product.category === category;
+            const matchesSearch =
+                product.name.toLowerCase().includes(search.toLowerCase()) ||
+                product.description.toLowerCase().includes(search.toLowerCase());
 
-  const cartCount = Object.values(cart).reduce(
-    (sum, quantity) => sum + quantity,
-    0
-  );
+            return matchesCategory && matchesSearch;
+        });
+    }, [category, search]);
 
-  const total = products.reduce(
-    (sum, product) => sum + product.price * (cart[product.id] || 0),
-    0
-  );
+    const cartItems = products.filter((product) => (cart[product.id] || 0) > 0);
+    const cartCount = getCartCount(cart);
+    const subtotal = cartItems.reduce(
+        (total, product) => total + product.price * (cart[product.id] || 0),
+        0
+    );
 
-  function addToCart(id: number) {
-    setCart((current) => ({
-      ...current,
-      [id]: (current[id] || 0) + 1,
-    }));
-    setNotice("Added to your bag ♡");
-    setTimeout(() => setNotice(""), 2000);
-  }
+    function addToCartItem(product: Product) {
+        const nextCart = addToCart(product.id);
+        setCart(nextCart);
+        setNotice(`${product.name} added to your bag 🌿`);
+        window.setTimeout(() => setNotice(""), 2500);
+    }
 
-  return (
-    <main>
-      <div className="announcement">
-        A little care, a lot of glow ✿ Welcome to Floralyn Skin
-      </div>
+    function changeQuantity(id: number, amount: number) {
+        const nextCart = changeCartQuantity(id, amount);
+        setCart(nextCart);
+    }
 
-      <header className="navbar">
-        <a href="#" className="logo">✿ Floralyn Skin</a>
-        <nav>
-          <a href="#home">Home</a>
-          <a href="#shop">Shop</a>
-          <a href="#about">Our Story</a>
-        </nav>
-        <a className="bag" href="#cart">
-          ♡ Bag ({cartCount})
-        </a>
-      </header>
-
-      <section className="hero" id="home">
-        <div className="hero-content">
-          <span className="eyebrow">YOUR DAILY SKINCARE RITUAL</span>
-          <h1>Your skin,<br />your softest glow.</h1>
-          <p>
-            Thoughtful skincare for everyday moments.
-            Discover your new favourites and let your natural
-            beauty bloom.
-          </p>
-          <a className="primary-button" href="#shop">
-            Shop the collection →
-          </a>
-          <div className="hero-note">Gentle care · Everyday glow · Made for you</div>
-        </div>
-        <div className="hero-image">
-          <img
-            src="https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=1000"
-            alt="Skincare products"
-          />
-          <div className="image-caption">
-            <span>YOUR MOMENT OF SELF-CARE</span>
-            <strong>Bloom in your own way.</strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="shop-section" id="shop">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">THE COLLECTION</span>
-            <h2>Find your daily ritual</h2>
-            <p>Little essentials. Lovely skin days.</p>
-          </div>
-          <div className="search-box">
-            <span>⌕</span>
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search skincare..."
-              aria-label="Search products"
-            />
-          </div>
-        </div>
-
-        <div className="product-grid">
-          {filteredProducts.map((product) => (
-            <article className="product-card" key={product.id}>
-              <div className="product-image">
-                <img src={product.image} alt={product.name} />
-                <span className="product-tag">FLORALYN FAVOURITE</span>
-              </div>
-              <div className="product-info">
-                <span className="category">{product.category}</span>
-                <h3>{product.name}</h3>
-                <p>{product.description}</p>
-                <div className="product-bottom">
-                  <strong>${product.price.toFixed(2)}</strong>
-                  <button onClick={() => addToCart(product.id)}>
-                    + Add to bag
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {filteredProducts.length === 0 && (
-          <p className="empty">No products found. Try another search.</p>
-        )}
-      </section>
-
-      <section className="story" id="about">
-        <span className="eyebrow">A LITTLE ABOUT US</span>
-        <h2>Care that feels like you.</h2>
-        <p>
-          Floralyn Skin is all about making everyday skincare
-          feel simple, gentle, and special. Take a breath,
-          slow down, and make a little time for yourself.
-        </p>
-        <a href="#shop" className="story-link">Explore our collection →</a>
-      </section>
-
-      <section className="cart-section" id="cart">
-        <span className="eyebrow">YOUR SELECTION</span>
-        <h2>Your shopping bag ♡</h2>
-
-        {cartCount === 0 ? (
-          <p>Your bag is waiting for something lovely.</p>
-        ) : (
-          <>
-            {products
-              .filter((product) => cart[product.id])
-              .map((product) => (
-                <div className="cart-row" key={product.id}>
-                  <span>{product.name}</span>
-                  <div className="quantity">
-                    <button
-                      aria-label={`Remove one ${product.name}`}
-                      onClick={() =>
-                        setCart((current) => ({
-                          ...current,
-                          [product.id]: Math.max(
-                            0,
-                            (current[product.id] || 0) - 1
-                          ),
-                        }))
-                      }
-                    >
-                      −
-                    </button>
-                    <span>{cart[product.id]}</span>
-                    <button onClick={() => addToCart(product.id)}>+</button>
-                  </div>
-                  <strong>
-                    ${(product.price * cart[product.id]).toFixed(2)}
-                  </strong>
-                </div>
-              ))}
-            <div className="cart-total">
-              <span>Subtotal</span>
-              <strong>${total.toFixed(2)}</strong>
+    return (
+        <main>
+            <div className="announcement">
+                A little nature, a little luxury — enjoy 10% off your first order
+                <span> · </span> Use code <strong> BLOOM10 </strong>
             </div>
-            <p className="cart-note">
-              Delivery fees and final payment will be confirmed at checkout.
-            </p>
-            <button
-              className="primary-button checkout-button"
-              onClick={() =>
-                setNotice(
-                  "Checkout demo only. Real order and payment processing are not connected yet."
-                )
-              }
-            >
-              Proceed to checkout →
-            </button>
-          </>
-        )}
 
-        {notice && <p className="notice" role="status">{notice}</p>}
-      </section>
+            <header className="site-header">
+                <Link href="#home" className="brand" aria-label="Floralyn Skin home">
+                    <span className="brand-mark">✳</span>
+                    <span>
+                        FLORALYN
+                        <small>BOTANICAL SKINCARE</small>
+                    </span>
+                </Link>
 
-      <footer>
-        <a href="#home" className="logo">✿ Floralyn Skin</a>
-        <p>A little care, a lot of glow.</p>
+                <button
+                    className="menu-toggle"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    aria-label="Toggle navigation"
+                >
+                    {menuOpen ? "✕" : "☰"}
+                </button>
 
-      </footer>
-    </main>
-  );
+                <nav className={menuOpen ? "nav-links nav-open" : "nav-links"}>
+                    <Link href="#home" onClick={() => setMenuOpen(false)}>Home</Link>
+                    <Link href="#shop" onClick={() => setMenuOpen(false)}>Shop</Link>
+                    <Link href="#ritual" onClick={() => setMenuOpen(false)}>Our ritual</Link>
+                    <Link href="/wishlist" onClick={() => setMenuOpen(false)}>Wishlist</Link>
+                    <Link href="/account" onClick={() => setMenuOpen(false)}>Account</Link>
+                    <Link href="/cart" onClick={() => setMenuOpen(false)}>Cart</Link>
+                </nav>
+
+                <div className="header-actions">
+                    <button
+                        className="icon-button"
+                        onClick={() => {
+                            document.getElementById("shop")?.scrollIntoView({
+                                behavior: "smooth",
+                            });
+                            setMenuOpen(false);
+                        }}
+                        aria-label="Search products"
+                    >
+                        ⌕
+                    </button>
+                    <button
+                        className="bag-button"
+                        onClick={() => setCartOpen(true)}
+                        aria-label={`Shopping bag with ${cartCount} items`}
+                    >
+                        Bag <span className="bag-count">{cartCount}</span>
+                    </button>
+                </div>
+            </header>
+
+            <section className="hero" id="home">
+                <div className="hero-copy">
+                    <div className="eyebrow">
+                        <span className="eyebrow-line" />
+                        YOUR DAILY MOMENT OF CALM
+                    </div>
+                    <h1>
+                        Let your skin
+                        <br />
+                        <em>bloom naturally.</em>
+                    </h1>
+                    <p className="hero-description">
+                        Thoughtful skincare inspired by nature. Gentle rituals, botanical
+                        ingredients, and a little everyday luxury for your skin.
+                    </p>
+                    <div className="hero-buttons">
+                        <a className="button button-dark" href="#shop">
+                            Discover your ritual <span>↗</span>
+                        </a>
+                        <a className="text-link" href="#story">
+                            Our philosophy ↗
+                        </a>
+                    </div>
+                    <div className="hero-note">
+                        <span className="note-icon">✳</span>
+                        <span>
+                            <strong>Less, but more intentional.</strong>
+                            <small>Skincare that feels like a deep breath.</small>
+                        </span>
+                    </div>
+                    <span className="hero-decoration">grow gently · glow softly</span>
+                </div>
+
+                <div className="hero-visual">
+                    <Image
+                        className="hero-image"
+                        src="https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=1200&q=90"
+                        alt="Elegant skincare products in a natural setting"
+                        width={1200}
+                        height={1200}
+                        priority
+                    />
+                    <div className="hero-image-label">
+                        <span className="label-flower">✿</span>
+                        <span>
+                            ROOTED IN NATURE
+                            <small>Made for your everyday ritual</small>
+                        </span>
+                    </div>
+                    <div className="floating-seal">
+                        <span>YOUR SKIN</span>
+                        <span className="seal-flower">✳</span>
+                        <span>YOUR RITUAL</span>
+                    </div>
+                </div>
+            </section>
+
+            <section className="trust-strip">
+                <div><span>✳</span> Nature-inspired care</div>
+                <div><span>✳</span> Gentle daily rituals</div>
+                <div><span>✳</span> Thoughtfully selected ingredients</div>
+                <div><span>✳</span> A little luxury, every day</div>
+            </section>
+
+            <section className="ritual-spotlight section-pad">
+                <div className="section-heading">
+                    <div>
+                        <div className="eyebrow">WHY IT FEELS GOOD</div>
+                        <h2>Your ritual, made <em>gentle.</em></h2>
+                    </div>
+                    <a className="text-link" href="#shop">Build your routine ↗</a>
+                </div>
+                <div className="spotlight-grid">
+                    {ritualHighlights.map((item) => (
+                        <article className="spotlight-card" key={item.title}>
+                            <span className="spotlight-icon">{item.icon}</span>
+                            <h3>{item.title}</h3>
+                            <p>{item.description}</p>
+                        </article>
+                    ))}
+                </div>
+            </section>
+
+            <section className="shop-section section-pad" id="shop">
+                <div className="section-heading">
+                    <div>
+                        <div className="eyebrow">THE FLORALYN COLLECTION</div>
+                        <h2>Your skin&apos;s new <em>happy place.</em></h2>
+                    </div>
+                    <span className="collection-count">
+                        {filteredProducts.length.toString().padStart(2, "0")} PRODUCTS
+                    </span>
+                </div>
+
+                <div className="shop-controls">
+                    <div className="category-tabs" aria-label="Filter by category">
+                        {categories.map((item) => (
+                            <button
+                                key={item}
+                                className={category === item ? "category-tab active" : "category-tab"}
+                                onClick={() => setCategory(item)}
+                            >
+                                {item}
+                            </button>
+                        ))}
+                    </div>
+                    <label className="search-box">
+                        <span>⌕</span>
+                        <input
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="Find your favorite..."
+                            aria-label="Search products"
+                        />
+                    </label>
+                </div>
+
+                {filteredProducts.length > 0 ? (
+                    <div className="product-grid">
+                        {filteredProducts.map((product, index) => (
+                            <article className="product-card" key={product.id}>
+                                <Link href={`/product/${product.id}`} className={`product-image-wrap product-tone-${index % 4}`}>
+                                    <Image src={product.image} alt={product.name} width={800} height={960} />
+                                    <span className="product-tag">{product.tag}</span>
+                                </Link>
+                                <div className="product-info">
+                                    <div>
+                                        <span className="product-category">{product.category}</span>
+                                        <h3>{product.name}</h3>
+                                        <p>{product.description}</p>
+                                    </div>
+                                    <strong className="product-price">${product.price.toFixed(2)}</strong>
+                                </div>
+                                <div className="product-card-actions">
+                                    <button className="add-button" onClick={() => addToCartItem(product)}>
+                                        Add to bag <span>↗</span>
+                                    </button>
+                                    <Link href={`/product/${product.id}`} className="text-link product-link">
+                                        View details
+                                    </Link>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="empty-search">
+                        <span>✿</span>
+                        <h3>No petals found.</h3>
+                        <p>Try another search or choose a different category.</p>
+                        <button
+                            className="button button-dark"
+                            onClick={() => {
+                                setSearch("");
+                                setCategory("All");
+                            }}
+                        >
+                            See all products
+                        </button>
+                    </div>
+                )}
+                <p className="demo-note">
+                    Product names, descriptions, prices, and images are sample demo content.
+                </p>
+            </section>
+
+            <section className="ritual-section" id="ritual">
+                <div className="ritual-image">
+                    <Image
+                        src="https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?auto=format&fit=crop&w=1000&q=85"
+                        alt="Skincare products arranged in a calm botanical setting"
+                        width={1000}
+                        height={1200}
+                    />
+                    <span className="image-caption">SLOW DOWN. SOFTEN. GLOW.</span>
+                </div>
+                <div className="ritual-copy">
+                    <div className="eyebrow">A GENTLER KIND OF BEAUTY</div>
+                    <h2>Make room for a little <em>self-love.</em></h2>
+                    <p>
+                        Your skincare routine doesn&apos;t need to be complicated. It can be
+                        three quiet minutes, a deep breath, and a moment just for you.
+                    </p>
+                    <div className="ritual-steps">
+                        <div><span>01</span><div><strong>Cleanse gently</strong><small>Start fresh without the rush.</small></div></div>
+                        <div><span>02</span><div><strong>Nourish thoughtfully</strong><small>Choose care that suits your skin.</small></div></div>
+                        <div><span>03</span><div><strong>Glow in your own way</strong><small>Let consistency be your ritual.</small></div></div>
+                    </div>
+                    <a className="button button-dark" href="#shop">Find your essentials ↗</a>
+                </div>
+            </section>
+
+            <section className="story-section section-pad" id="story">
+                <span className="story-flower">✳</span>
+                <div className="eyebrow">A NOTE FROM FLORALYN</div>
+                <h2>Beauty grows when we <em>care gently.</em></h2>
+                <p>
+                    We believe skincare can be a small act of kindness to yourself.
+                    Floralyn Skin is a botanical-inspired world of simple routines,
+                    thoughtful choices, and everyday moments that help you feel at home
+                    in your own skin.
+                </p>
+                <a href="#shop" className="text-link">Explore our collection ↗</a>
+            </section>
+
+            <section className="newsletter-section">
+                <div className="newsletter-flower">✿</div>
+                <div>
+                    <div className="eyebrow">A LITTLE LOVE IN YOUR INBOX</div>
+                    <h2>Notes from our <em>garden.</em></h2>
+                    <p>Skincare tips, little rituals, and first looks at new arrivals.</p>
+                </div>
+                <form
+                    className="newsletter-form"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        setNotice("Thanks for joining our garden! Connect an email service to save subscribers.");
+                    }}
+                >
+                    <input type="email" placeholder="Your email address" required aria-label="Your email address" />
+                    <button type="submit" aria-label="Subscribe">Join us ↗</button>
+                </form>
+                <small className="newsletter-disclaimer">A gentle note now and then. Unsubscribe whenever you like.</small>
+            </section>
+
+            <footer className="site-footer">
+                <div className="footer-main">
+                    <div className="footer-brand">
+                        <Link href="#home" className="brand">
+                            <span className="brand-mark">✳</span>
+                            <span>FLORALYN<small>BOTANICAL SKINCARE</small></span>
+                        </Link>
+                        <p>A little nature, a little luxury.<br />Your everyday moment of calm.</p>
+                    </div>
+                    <div className="footer-column">
+                        <strong>Explore</strong>
+                        <a href="#shop">Shop all</a>
+                        <a href="#ritual">Our ritual</a>
+                        <a href="#story">Our story</a>
+                    </div>
+                    <div className="footer-column">
+                        <strong>Need a hand?</strong>
+                        <a href="mailto:hello@floralynskin.example">Contact us</a>
+                        <Link href="/wishlist">Wishlist</Link>
+                        <Link href="/account">Customer account</Link>
+                        <Link href="/cart">Shopping bag</Link>
+                        <Link href="/admin">Store management</Link>
+                    </div>
+                    <div className="footer-note">
+                        <span>✿</span>
+                        <p>Take a breath.<br /><em>You&apos;re blooming just fine.</em></p>
+                    </div>
+                </div>
+                <div className="footer-bottom">
+                    <span>© 2026 Floralyn Skin. Demo storefront.</span>
+                    <span>Made with care &amp; a little botanical magic ✳</span>
+                </div>
+            </footer>
+
+            {notice && (
+                <div className="toast" role="status">
+                    <span>✿</span> {notice}
+                    <button onClick={() => setNotice("")} aria-label="Dismiss notification">×</button>
+                </div>
+            )}
+
+            {cartOpen && (
+                <div className="drawer-backdrop" onClick={() => setCartOpen(false)}>
+                    <aside
+                        className="cart-drawer"
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label="Shopping bag"
+                    >
+                        <div className="drawer-header">
+                            <div>
+                                <span className="eyebrow">YOUR LITTLE COLLECTION</span>
+                                <h2>Your bag <em>({cartCount})</em></h2>
+                            </div>
+                            <button className="close-button" onClick={() => setCartOpen(false)} aria-label="Close cart">×</button>
+                        </div>
+
+                        {cartItems.length === 0 ? (
+                            <div className="cart-empty">
+                                <span>✿</span>
+                                <h3>Your bag is blooming empty.</h3>
+                                <p>Find something lovely for your daily ritual.</p>
+                                <button
+                                    className="button button-dark"
+                                    onClick={() => {
+                                        setCartOpen(false);
+                                        document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
+                                    }}
+                                >
+                                    Explore the collection
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="cart-items">
+                                    {cartItems.map((product) => (
+                                        <div className="cart-item" key={product.id}>
+                                            <Image src={product.image} alt={product.name} width={120} height={150} />
+                                            <div className="cart-item-info">
+                                                <span>{product.category}</span>
+                                                <h3>{product.name}</h3>
+                                                <strong>${product.price.toFixed(2)}</strong>
+                                                <div className="quantity-control">
+                                                    <button onClick={() => changeQuantity(product.id, -1)} aria-label={`Remove one ${product.name}`}>−</button>
+                                                    <span>{cart[product.id]}</span>
+                                                    <button onClick={() => changeQuantity(product.id, 1)} aria-label={`Add one ${product.name}`}>+</button>
+                                                </div>
+                                            </div>
+                                            <strong className="line-price">${(product.price * (cart[product.id] || 0)).toFixed(2)}</strong>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="cart-summary">
+                                    <div><span>Subtotal</span><strong>${subtotal.toFixed(2)}</strong></div>
+                                    <p>Shipping and any applicable taxes are calculated at checkout.</p>
+                                    <Link
+                                        href="/checkout"
+                                        className="button button-dark checkout-button"
+                                        onClick={() => setCartOpen(false)}
+                                    >
+                                        Continue to checkout ↗
+                                    </Link>
+                                    <button className="continue-shopping" onClick={() => setCartOpen(false)}>Continue shopping</button>
+                                </div>
+                            </>
+                        )}
+                    </aside>
+                </div>
+            )}
+        </main>
+    );
 }
