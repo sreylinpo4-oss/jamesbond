@@ -17,7 +17,11 @@ export const metadata: Metadata = {
   description: "Botanical skincare essentials for calmer, brighter, more intentional routines.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="en"
