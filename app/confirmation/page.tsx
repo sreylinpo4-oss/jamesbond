@@ -1,43 +1,146 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
+import { clearCart } from "@/lib/cart";
+
+type OrderDetails = {
+  order_number: string;
+  status: string;
+  payment_method: string;
+  payment_status: string;
+  currency: string;
+  subtotal_cents: number;
+  shipping_cents: number;
+  total_cents: number;
+  order_items: {
+    product_name: string;
+    quantity: number;
+    unit_price_cents: number;
+    line_total_cents: number;
+  }[];
+};
 
 function ConfirmationDetails() {
   const searchParams = useSearchParams();
-  const orderNumber = searchParams.get("order") ?? "FL-2407";
-  const paymentMethod = searchParams.get("method") ?? "ABA / KHQR";
-  const total = searchParams.get("total") ?? "0.00";
+  const orderNumber = searchParams.get("order");
+  const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [error, setError] = useState(() =>
+    orderNumber ? "" : "No order number was provided.",
+  );
+  const [isLoading, setIsLoading] = useState(Boolean(orderNumber));
+
+  useEffect(() => {
+    if (!orderNumber) return;
+    const requestedOrderNumber = orderNumber;
+
+    let isActive = true;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function loadOrder() {
+      try {
+        const response = await fetch(`/api/orders?order=${encodeURIComponent(requestedOrderNumber)}`, {
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (!response.ok || !result.order) {
+          throw new Error(result.error || "We could not load this order.");
+        }
+        if (!isActive) return;
+
+        const currentOrder = result.order as OrderDetails;
+        setOrder(currentOrder);
+        setIsLoading(false);
+        if (currentOrder.payment_status === "paid" || currentOrder.payment_status === "cod_due") {
+          clearCart();
+        } else if (currentOrder.payment_status === "pending" && attempts < 10) {
+          attempts += 1;
+          timer = setTimeout(loadOrder, 3000);
+        }
+      } catch (loadError) {
+        if (!isActive) return;
+        setError(
+          loadError instanceof Error ? loadError.message : "We could not load this order.",
+        );
+        setIsLoading(false);
+      }
+    }
+
+    void loadOrder();
+    return () => {
+      isActive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [orderNumber]);
+
+  const isPaid = order?.payment_status === "paid";
+  const isCod = order?.payment_status === "cod_due";
+  const paymentLabel =
+    order?.payment_method === "aba_payway" ? "ABA PayWay / KHQR" : "Cash on delivery";
 
   return (
     <div className="confirmation-card">
       <span className="story-flower">✳</span>
-      <div className="eyebrow">ORDER CONFIRMED</div>
-      <h1>Thank you for your demo order.</h1>
-      <p className="confirmation-summary">
-        Your order <strong>{orderNumber}</strong> has been placed in this demo storefront.
-        This experience does not process real card, bank, or mobile payments.
-      </p>
-
-      <div className="confirmation-box">
-        <div className="summary-row">
-          <span>Payment method</span>
-          <strong>{paymentMethod}</strong>
-        </div>
-        <div className="summary-row">
-          <span>Order total</span>
-          <strong>${total}</strong>
-        </div>
-        <div className="summary-row">
-          <span>Delivery</span>
-          <strong>Demo delivery</strong>
-        </div>
+      <div className="eyebrow">
+        {isLoading ? "LOADING ORDER" : isPaid ? "PAYMENT RECEIVED" : isCod ? "ORDER PLACED" : "PAYMENT STATUS"}
       </div>
+      <h1>
+        {isLoading
+          ? "Loading your order…"
+          : error
+            ? "We couldn’t load this order."
+            : isPaid
+              ? "Thank you for your order."
+              : isCod
+                ? "Your order is on its way to our team."
+                : order?.payment_status === "pending"
+                  ? "We’re confirming your payment."
+                  : "Payment wasn’t completed."}
+      </h1>
+      {error ? (
+        <p className="confirmation-summary" role="alert">{error}</p>
+      ) : order ? (
+        <>
+          <p className="confirmation-summary">
+            Order <strong>{order.order_number}</strong>
+            {isPaid
+              ? " has been paid successfully."
+              : isCod
+                ? " has been placed. Please have payment ready when it arrives."
+                : order.payment_status === "pending"
+                  ? " is awaiting payment confirmation."
+                  : " was not paid. You can return to the shop and try again."}
+          </p>
 
-      <p className="demo-note compact-note">
-        Demo notice: no real transaction or payment was charged. This is not a successful online payment.
-      </p>
+          <div className="confirmation-box">
+            <div className="summary-row">
+              <span>Payment method</span>
+              <strong>{paymentLabel}</strong>
+            </div>
+            <div className="summary-row">
+              <span>Order status</span>
+              <strong>{order.status}</strong>
+            </div>
+            {order.order_items.map((item) => (
+              <div className="summary-row" key={`${order.order_number}-${item.product_name}`}>
+                <span>{item.product_name} × {item.quantity}</span>
+                <strong>{order.currency} {(item.line_total_cents / 100).toFixed(2)}</strong>
+              </div>
+            ))}
+            <div className="summary-row">
+              <span>Shipping</span>
+              <strong>{order.currency} {(order.shipping_cents / 100).toFixed(2)}</strong>
+            </div>
+            <div className="summary-row">
+              <span>Total</span>
+              <strong>{order.currency} {(order.total_cents / 100).toFixed(2)}</strong>
+            </div>
+          </div>
+        </>
+      ) : null}
 
       <div className="confirmation-actions">
         <Link href="/" className="button button-dark">Continue shopping</Link>

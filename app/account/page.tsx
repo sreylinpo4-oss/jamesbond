@@ -20,6 +20,17 @@ async function AccountDetails() {
     .eq("id", user.id)
     .maybeSingle();
 
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select("order_number,status,payment_status,currency,total_cents,created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (ordersError) {
+    console.error("Failed to load customer order history:", ordersError);
+  }
+
   const joinedDate = user.created_at
     ? new Date(user.created_at).toLocaleDateString("en-US", {
         month: "long",
@@ -71,12 +82,29 @@ async function AccountDetails() {
 
         <div className="account-card">
           <h3>Recent Orders</h3>
-          <div className="orders-empty">
-            <p>You have no recent orders.</p>
-            <Link href="/#shop" className="primary-button shop-now-btn">
-              Discover Skincare →
-            </Link>
-          </div>
+          {ordersError ? (
+            <p role="alert">Order history could not be loaded. Please refresh this page.</p>
+          ) : orders?.length ? (
+            orders.map((order) => (
+              <div className="detail-item" key={order.order_number}>
+                <span>
+                  <strong>{order.order_number}</strong>
+                  <br />
+                  <span className="detail-label">{order.status} · Payment {order.payment_status}</span>
+                </span>
+                <strong className="detail-value">
+                  {order.currency} {(order.total_cents / 100).toFixed(2)}
+                </strong>
+              </div>
+            ))
+          ) : (
+            <div className="orders-empty">
+              <p>You have no recent orders.</p>
+              <Link href="/#shop" className="primary-button shop-now-btn">
+                Discover Skincare →
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </>

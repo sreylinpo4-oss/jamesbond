@@ -1,38 +1,42 @@
-# jamesbond
+# Floralyn Skin
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Floralyn Skin is a Next.js storefront with Supabase authentication and a Supabase-backed commerce API.
 
-## Getting Started
+## Local setup
 
-First, run the development server:
+1. Install Node.js 20.9 or later and dependencies:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase project. Keep every value not prefixed with `NEXT_PUBLIC_` server-side; never commit `.env.local`.
+3. Apply every SQL file in `supabase/migrations` in timestamp order, including the auth schema before the commerce backend, using the Supabase SQL editor or Supabase CLI.
+4. Create or sign in to the account that should manage the store. Find its user UUID in Supabase Authentication, then promote it from the SQL editor:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```sql
+   update public.profiles
+   set role = 'admin'
+   where id = 'YOUR_AUTH_USER_UUID';
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   The profile role trigger restricts role changes to the project database administrator.
+5. Add real inventory quantities at **Admin → Inventory**. Seed quantities are intentionally zero, so checkout is unavailable until stock is entered.
+6. Start the application:
 
-## Learn More
+   ```bash
+   npm run dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+## Payments and scheduled cleanup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Configure `SUPABASE_SERVICE_ROLE_KEY`, `PAYWAY_MERCHANT_ID`, and `PAYWAY_API_KEY` as server-only deployment secrets. Set `PAYWAY_ENV=sandbox` for testing; switch to `production` only with production ABA PayWay credentials.
+- Set `NEXT_PUBLIC_SITE_URL` to the deployed HTTPS origin. Configure the matching origin/return URLs in the PayWay merchant portal.
+- Orders reserve stock atomically when created. ABA callbacks are checked server-to-server before a payment is marked paid. Set a strong random `CRON_SECRET` and schedule an authenticated `POST` to `/api/cron/expire-orders` at least every 10 minutes, sending `Authorization: Bearer <CRON_SECRET>`, so expired unpaid orders release reserved stock.
+- Test the complete payment and callback flow in PayWay sandbox before accepting live payments. The database migration and payment flow must be applied and tested against the target Supabase and ABA accounts; local builds alone do not verify them.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Current scope
 
-## Deploy on Vercel
+The admin dashboard reads and writes inventory, warehouse, order-status, and promotion records through authenticated Supabase endpoints. Promotion rules are stored but are not yet applied to checkout pricing. Catalog browsing still uses the storefront's bundled product list; checkout pricing and availability are independently enforced against database products and inventory.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run `npm run lint` and `npm run build` to validate the application.

@@ -2,13 +2,22 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Suspense, use, useMemo, useState } from "react";
 
 import { addToCart, getCartCount } from "@/lib/cart";
 import { getProductById, products } from "@/lib/products";
 
-export default function ProductPage({ params }: { params: { id: string } }) {
-  const productId = Number(params.id);
+export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={<main className="product-shell" aria-busy="true" />}>
+      <ProductDetails params={params} />
+    </Suspense>
+  );
+}
+
+function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const productId = Number(id);
   const product = useMemo(() => getProductById(productId), [productId]);
   const [cartCount, setCartCount] = useState<number>(() => getCartCount());
 

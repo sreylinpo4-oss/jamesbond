@@ -1,14 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  defaultAdminData,
-  getAdminDataSnapshot,
   ORDER_STATUSES,
-  saveAdminData,
-  subscribeToAdminData,
   type AdminOrder,
   type AdminStoreData,
   type DiscountKind,
@@ -34,6 +30,13 @@ const discountKinds: DiscountKind[] = [
   "Coupon",
   "Bundle",
 ];
+
+const emptyStoreData: AdminStoreData = {
+  warehouses: [],
+  inventory: [],
+  orders: [],
+  discounts: [],
+};
 
 function totalStock(item: InventoryItem) {
   return Object.values(item.stockByWarehouse).reduce((sum, quantity) => sum + quantity, 0);
@@ -110,13 +113,12 @@ function downloadBlob(content: BlobPart, filename: string, type: string) {
 }
 
 export default function AdminPage() {
-  const data = useSyncExternalStore(
-    subscribeToAdminData,
-    getAdminDataSnapshot,
-    () => defaultAdminData,
-  );
+  const [data, setData] = useState<AdminStoreData>(emptyStoreData);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [hasChanges, setHasChanges] = useState(false);
   const [activeSection, setActiveSection] = useState<AdminSection>("overview");
-  const [activeWarehouse, setActiveWarehouse] = useState("phnom-penh");
+  const [activeWarehouse, setActiveWarehouse] = useState("");
   const [notice, setNotice] = useState("");
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [newWarehouseLocation, setNewWarehouseLocation] = useState("");
@@ -126,6 +128,80 @@ export default function AdminPage() {
   const [minimumQuantity, setMinimumQuantity] = useState("24");
   const [couponCode, setCouponCode] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const persistedData = useRef<AdminStoreData>(emptyStoreData);
+  const saveRevision = useRef(0);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadStore() {
+      try {
+        const response = await fetch("/api/admin/store", { cache: "no-store" });
+        const result = await response.json();
+        if (!response.ok || !result.data) {
+          throw new Error(result.error || "Store data could not be loaded.");
+        }
+        if (!isActive) return;
+        const loadedData = result.data as AdminStoreData;
+        persistedData.current = loadedData;
+        setData(loadedData);
+        setActiveWarehouse(loadedData.warehouses[0]?.id ?? "");
+        setLoadError("");
+      } catch (error) {
+        if (!isActive) return;
+        setLoadError(
+          error instanceof Error ? error.message : "Store data could not be loaded.",
+        );
+      } finally {
+        if (isActive) setIsLoaded(true);
+      }
+    }
+
+    void loadStore();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded || !hasChanges) return;
+
+    const revision = saveRevision.current;
+    const snapshot = data;
+    const timer = window.setTimeout(() => {
+      saveQueue.current = saveQueue.current.then(async () => {
+        if (revision !== saveRevision.current) return;
+        try {
+          const response = await fetch("/api/admin/store", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ store: snapshot }),
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            throw new Error(result.error || "Store changes could not be saved.");
+          }
+          if (revision === saveRevision.current) {
+            persistedData.current = snapshot;
+            setHasChanges(false);
+            setNotice("Store changes saved to the database.");
+          }
+        } catch (error) {
+          if (revision !== saveRevision.current) return;
+          setData(persistedData.current);
+          setHasChanges(false);
+          setNotice(
+            error instanceof Error
+              ? `${error.message} Your unsaved changes were reverted.`
+              : "Store changes could not be saved. Your unsaved changes were reverted.",
+          );
+        }
+      });
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [data, hasChanges, isLoaded]);
 
   const lowStockItems = useMemo(
     () => data.inventory.filter((item) => totalStock(item) <= item.lowStockThreshold),
@@ -136,7 +212,9 @@ export default function AdminPage() {
 
   function updateStore(update: (current: AdminStoreData) => AdminStoreData) {
     const next = update(data);
-    saveAdminData(next);
+    saveRevision.current += 1;
+    setData(next);
+    setHasChanges(true);
   }
 
   function setStock(productId: number, warehouseId: string, quantity: number) {
@@ -226,7 +304,6 @@ export default function AdminPage() {
           const sku = findValue(row, "sku");
           const name = findValue(row, "name");
           const stockText = findValue(row, "stock");
-          const priceText = findValue(row, "price");
           const thresholdText = findValue(row, "lowStockThreshold");
           const warehouseName = findValue(row, "warehouse");
           const item = inventory.find(
@@ -249,9 +326,6 @@ export default function AdminPage() {
           }
 
           item.stockByWarehouse[warehouseId] = Math.floor(Number(stockText));
-          if (priceText && Number.isFinite(Number(priceText)) && Number(priceText) >= 0) {
-            item.price = Number(priceText);
-          }
           if (thresholdText && Number.isFinite(Number(thresholdText)) && Number(thresholdText) >= 0) {
             item.lowStockThreshold = Math.floor(Number(thresholdText));
           }
@@ -265,8 +339,12 @@ export default function AdminPage() {
         `Imported ${imported} row${imported === 1 ? "" : "s"}.` +
           (skipped.length ? ` Skipped ${skipped.length}: ${skipped.slice(0, 3).join("; ")}.` : ""),
       );
-    } catch {
-      setNotice("Import failed: could not read that CSV file.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? `Import failed: ${error.message}`
+          : "Import failed: could not read that CSV file.",
+      );
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -276,7 +354,7 @@ export default function AdminPage() {
     event.preventDefault();
     const name = newWarehouseName.trim();
     if (!name) return;
-    const id = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+    const id = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${crypto.randomUUID().slice(0, 8)}`;
     const warehouse: Warehouse = {
       id,
       name,
@@ -302,7 +380,7 @@ export default function AdminPage() {
     const value = discountValue.trim();
     if (!name || !value) return;
     const rule: DiscountRule = {
-      id: `rule-${Date.now()}`,
+      id: `rule-${crypto.randomUUID()}`,
       name,
       kind: discountKind,
       value,
@@ -319,7 +397,7 @@ export default function AdminPage() {
     setDiscountValue("");
     setMinimumQuantity("24");
     setCouponCode("");
-    setNotice(`${name} rule added. It is saved only in this browser demo.`);
+    setNotice(`${name} rule added.`);
   }
 
   function toggleDiscount(ruleId: string) {
@@ -361,7 +439,7 @@ export default function AdminPage() {
         </nav>
         <div className="admin-sidebar-foot">
           <span className="admin-online-mark" />
-          Demo data stored in this browser
+          Live database
         </div>
       </aside>
 
@@ -377,10 +455,19 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className="admin-demo-notice">
-          <strong>Prototype admin panel</strong>
-          <span>Changes are saved to this browser only. Connect a secure backend before using real stock, customer orders, discounts, or fulfillment.</span>
-        </div>
+        {!isLoaded ? (
+          <div className="admin-demo-notice" role="status">Loading live store data…</div>
+        ) : loadError ? (
+          <div className="admin-demo-notice" role="alert">
+            <strong>Store data unavailable</strong>
+            <span>{loadError}</span>
+          </div>
+        ) : (
+          <>
+                <div className="admin-demo-notice">
+              <strong>{hasChanges ? "Saving store changes…" : "Connected to store database"}</strong>
+                  <span>Inventory, fulfillment, and promotion rules are saved to Supabase.</span>
+            </div>
 
         {activeSection === "overview" && (
           <section className="admin-section">
@@ -557,7 +644,7 @@ export default function AdminPage() {
             </article>
 
             <p className="admin-help-note">
-              Import columns: <code>sku</code>, <code>name</code>, <code>stock</code>, and optional <code>warehouse</code>, <code>price</code>, <code>lowStockThreshold</code>. Stock values replace the count for that product and warehouse. CSV opens in Excel; native <code>.xlsx</code> import/export is not enabled.
+              Import columns: <code>sku</code>, <code>name</code>, <code>stock</code>, and optional <code>warehouse</code> and <code>lowStockThreshold</code>. Prices in the export are informational and are not changed by import. CSV opens in Excel; native <code>.xlsx</code> import/export is not enabled.
             </p>
           </section>
         )}
@@ -569,7 +656,7 @@ export default function AdminPage() {
                 <span className="mini-label">ORDER & FULFILLMENT MANAGEMENT</span>
                 <p>Track the order lifecycle and prepare demo shipping documents.</p>
               </div>
-              <span className="admin-result-count">{data.orders.length} demo orders</span>
+              <span className="admin-result-count">{data.orders.length} orders</span>
             </div>
             <article className="admin-panel table-panel">
               <div className="admin-table-scroll">
@@ -588,9 +675,13 @@ export default function AdminPage() {
                         <td><span className={`status-pill status-${order.status.toLowerCase()}`}>{order.status}</span></td>
                         <td>
                           <div className="fulfillment-actions">
-                            <select value={order.status} onChange={(event) => setOrderStatus(order.id, event.target.value as FulfillmentStatus)} aria-label={`Update ${order.id} status`}>
-                              {ORDER_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
-                            </select>
+                            {order.status === "Cancelled" ? (
+                              <span className="status-pill status-cancelled">Cancelled</span>
+                            ) : (
+                              <select value={order.status} onChange={(event) => setOrderStatus(order.id, event.target.value as FulfillmentStatus)} aria-label={`Update ${order.id} status`}>
+                                {ORDER_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                              </select>
+                            )}
                             <button type="button" className="admin-button secondary label-button" onClick={() => createShippingLabel(order)}>Shipping label</button>
                           </div>
                         </td>
@@ -609,7 +700,7 @@ export default function AdminPage() {
             <div className="admin-toolbar">
               <div>
                 <span className="mini-label">PRICING & DISCOUNT RULES</span>
-                <p>Manage demo flash sales, wholesale tiers, coupon codes, and bundles.</p>
+                <p>Manage flash sales, wholesale tiers, coupon codes, and bundles.</p>
               </div>
             </div>
 
@@ -677,9 +768,11 @@ export default function AdminPage() {
 
             <div className="admin-feature-note">
               <span>✳</span>
-              <div><strong>Pricing is a storefront demo.</strong><p>Rules are saved locally here and do not change live checkout prices, coupon validation, or wholesale eligibility.</p></div>
+            <div><strong>Promotions are not applied at checkout.</strong><p>Rules are saved to the database, but discount calculation and coupon validation are not yet enabled in checkout.</p></div>
             </div>
           </section>
+        )}
+          </>
         )}
 
         {notice && (

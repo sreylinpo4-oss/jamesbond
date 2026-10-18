@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { addToCart, changeCartQuantity, getCart, getCartCount } from "@/lib/cart";
 import { categories, products, type Product } from "@/lib/products";
@@ -30,8 +30,11 @@ export default function Home() {
     const [search, setSearch] = useState("");
     const [cart, setCart] = useState<Record<number, number>>(() => getCart());
     const [cartOpen, setCartOpen] = useState(false);
+    const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [notice, setNotice] = useState("");
+    const previewPanelRef = useRef<HTMLElement>(null);
+    const previewTriggerRef = useRef<HTMLAnchorElement>(null);
 
     const filteredProducts = useMemo(() => {
         return products.filter((product) => {
@@ -62,6 +65,52 @@ export default function Home() {
     function changeQuantity(id: number, amount: number) {
         const nextCart = changeCartQuantity(id, amount);
         setCart(nextCart);
+    }
+
+    function openProductPreview(event: MouseEvent<HTMLAnchorElement>, product: Product) {
+        if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        previewTriggerRef.current = event.currentTarget;
+        setPreviewProduct(product);
+    }
+
+    function closeProductPreview() {
+        setPreviewProduct(null);
+        previewTriggerRef.current?.focus();
+    }
+
+    useEffect(() => {
+        if (!previewProduct) return;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        previewPanelRef.current?.focus();
+
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === "Escape") closeProductPreview();
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [previewProduct]);
+
+    function addPreviewProductToCart() {
+        if (!previewProduct) return;
+        setCart(addToCart(previewProduct.id));
+        setNotice(`${previewProduct.name} added to your bag 🌿`);
     }
 
     return (
@@ -241,14 +290,27 @@ export default function Home() {
                     <div className="product-grid">
                         {filteredProducts.map((product, index) => (
                             <article className="product-card" key={product.id}>
-                                <Link href={`/product/${product.id}`} className={`product-image-wrap product-tone-${index % 4}`}>
+                                <Link
+                                    href={`/product/${product.id}`}
+                                    className={`product-image-wrap product-tone-${index % 4}`}
+                                    onClick={(event) => openProductPreview(event, product)}
+                                    aria-haspopup="dialog"
+                                >
                                     <Image src={product.image} alt={product.name} width={800} height={960} />
                                     <span className="product-tag">{product.tag}</span>
                                 </Link>
                                 <div className="product-info">
                                     <div>
                                         <span className="product-category">{product.category}</span>
-                                        <h3>{product.name}</h3>
+                                        <h3>
+                                            <Link
+                                                href={`/product/${product.id}`}
+                                                onClick={(event) => openProductPreview(event, product)}
+                                                aria-haspopup="dialog"
+                                            >
+                                                {product.name}
+                                            </Link>
+                                        </h3>
                                         <p>{product.description}</p>
                                     </div>
                                     <strong className="product-price">${product.price.toFixed(2)}</strong>
@@ -257,7 +319,12 @@ export default function Home() {
                                     <button className="add-button" onClick={() => addToCartItem(product)}>
                                         Add to bag <span>↗</span>
                                     </button>
-                                    <Link href={`/product/${product.id}`} className="text-link product-link">
+                                    <Link
+                                        href={`/product/${product.id}`}
+                                        className="text-link product-link"
+                                        onClick={(event) => openProductPreview(event, product)}
+                                        aria-haspopup="dialog"
+                                    >
                                         View details
                                     </Link>
                                 </div>
@@ -449,6 +516,71 @@ export default function Home() {
                                 </div>
                             </>
                         )}
+                    </aside>
+                </div>
+            )}
+
+            {previewProduct && (
+                <div
+                    className="product-preview-backdrop"
+                    onClick={(event) => {
+                        if (event.target === event.currentTarget) closeProductPreview();
+                    }}
+                >
+                    <aside
+                        ref={previewPanelRef}
+                        className="product-preview-panel"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="product-preview-title"
+                        tabIndex={-1}
+                    >
+                        <div className="product-preview-header">
+                            <span className="eyebrow">A CLOSER LOOK</span>
+                            <button
+                                className="close-button"
+                                onClick={closeProductPreview}
+                                aria-label="Close product details"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="product-preview-image">
+                            <Image
+                                src={previewProduct.image}
+                                alt={previewProduct.name}
+                                width={800}
+                                height={960}
+                                priority
+                            />
+                            <span className="product-tag">{previewProduct.tag}</span>
+                        </div>
+                        <div className="product-preview-content">
+                            <span className="product-category">{previewProduct.category}</span>
+                            <h2 id="product-preview-title">{previewProduct.name}</h2>
+                            <strong className="product-preview-price">
+                                ${previewProduct.price.toFixed(2)}
+                            </strong>
+                            <p>{previewProduct.detail}</p>
+                            <ul className="benefit-list">
+                                {previewProduct.benefits.map((benefit) => (
+                                    <li key={benefit}>{benefit}</li>
+                                ))}
+                            </ul>
+                            <button
+                                className="button button-dark product-preview-add"
+                                onClick={addPreviewProductToCart}
+                            >
+                                Add to bag <span>↗</span>
+                            </button>
+                            <Link
+                                href={`/product/${previewProduct.id}`}
+                                className="text-link product-preview-full-link"
+                                onClick={closeProductPreview}
+                            >
+                                View full product details ↗
+                            </Link>
+                        </div>
                     </aside>
                 </div>
             )}

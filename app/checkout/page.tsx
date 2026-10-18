@@ -2,29 +2,39 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { changeCartQuantity, clearCart, getCart, getCartCount } from "@/lib/cart";
 import { products } from "@/lib/products";
 
+type PayWayCheckout = {
+  action: string;
+  fields: Record<string, string>;
+};
+
 const paymentOptions = [
   {
-    value: "ABA / KHQR",
+    value: "aba_payway",
     title: "ABA / KHQR",
-    description: "Bank transfer or QR payment in a live store. Demo mode only.",
+    description: "Pay securely with ABA Pay or a KHQR-supported banking app.",
   },
   {
-    value: "Cash on Delivery",
+    value: "cash_on_delivery",
     title: "Cash on Delivery",
-    description: "Pay in cash when your package arrives. Demo mode only.",
+    description: "Pay in cash when your package arrives.",
   },
-];
+] as const;
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState<Record<number, number>>(() => getCart());
-  const [paymentMethod, setPaymentMethod] = useState("ABA / KHQR");
+  const [paymentMethod, setPaymentMethod] = useState<(typeof paymentOptions)[number]["value"]>("aba_payway");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [payWayCheckout, setPayWayCheckout] = useState<PayWayCheckout | null>(null);
+  const payWayFormRef = useRef<HTMLFormElement>(null);
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const cartItems = useMemo(
     () => products.filter((product) => (cart[product.id] || 0) > 0),
@@ -37,21 +47,91 @@ export default function CheckoutPage() {
   );
 
   const shipping = cartItems.length > 0 ? 8 : 0;
-  const total = subtotal + shipping;
 
   function handleQuantityChange(productId: number, amount: number) {
     const nextCart = changeCartQuantity(productId, amount);
     setCart(nextCart);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (payWayCheckout && payWayFormRef.current) {
+      payWayFormRef.current.submit();
+    }
+  }, [payWayCheckout]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const orderNumber = `FL-${String(Math.floor(Math.random() * 9000) + 1000)}`;
-    clearCart();
-    setCart({});
-    router.push(
-      `/confirmation?order=${orderNumber}&method=${encodeURIComponent(paymentMethod)}&total=${total.toFixed(2)}`,
-    );
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      idempotencyKeyRef.current ??= crypto.randomUUID();
+      const formData = new FormData(event.currentTarget);
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idempotencyKey: idempotencyKeyRef.current,
+          paymentMethod,
+          items: cartItems.map((product) => ({
+            productId: product.id,
+            quantity: cart[product.id],
+          })),
+          address: {
+            name: formData.get("name"),
+            phone: formData.get("phone"),
+            line1: formData.get("line1"),
+            line2: formData.get("line2"),
+            city: formData.get("city"),
+            postalCode: formData.get("postalCode"),
+            country: formData.get("country"),
+            notes: formData.get("notes"),
+          },
+        }),
+      });
+      const result: unknown = await response.json();
+      if (!result || typeof result !== "object") {
+        throw new Error("The order service returned an invalid response.");
+      }
+
+      const resultData = result as {
+        error?: unknown;
+        orderNumber?: unknown;
+        checkout?: unknown;
+      };
+      if (!response.ok) {
+        const message =
+          typeof resultData.error === "string"
+            ? resultData.error
+            : "We could not place your order. Please try again.";
+        throw new Error(message);
+      }
+      if (typeof resultData.orderNumber !== "string") {
+        throw new Error("The order service did not return an order number.");
+      }
+
+      if (paymentMethod === "cash_on_delivery") {
+        clearCart();
+        setCart({});
+        router.push(`/confirmation?order=${encodeURIComponent(resultData.orderNumber)}`);
+        return;
+      }
+
+      if (
+        !resultData.checkout ||
+        typeof resultData.checkout !== "object" ||
+        !("action" in resultData.checkout) ||
+        !("fields" in resultData.checkout)
+      ) {
+        throw new Error("The order was saved, but payment could not be started. Contact support with your order number.");
+      }
+      setPayWayCheckout(resultData.checkout as PayWayCheckout);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "We could not place your order. Please try again.",
+      );
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -77,48 +157,48 @@ export default function CheckoutPage() {
       ) : (
         <div className="checkout-layout">
           <form className="checkout-form" onSubmit={handleSubmit}>
-            <div className="demo-banner">
-              Demo checkout only — this storefront does not process real payments. No payment is charged.
-            </div>
-
             <div className="form-section-block">
               <h2>Delivery details</h2>
               <div className="form-row">
                 <label>
                   Full name
-                  <input type="text" defaultValue="Nadia Smith" required />
+                  <input type="text" name="name" autoComplete="name" required maxLength={120} />
                 </label>
               </div>
               <div className="form-row two-up">
                 <label>
-                  Email
-                  <input type="email" defaultValue="nadiasmith@example.com" required />
+                  Phone
+                  <input type="tel" name="phone" autoComplete="tel" required maxLength={24} />
                 </label>
                 <label>
-                  Phone
-                  <input type="tel" defaultValue="(555) 012-3456" required />
+                  Country
+                  <input type="text" name="country" autoComplete="country-name" defaultValue="Cambodia" required maxLength={100} />
                 </label>
               </div>
               <div className="form-row">
                 <label>
                   Address
-                  <input type="text" defaultValue="16 Lotus Lane" required />
+                  <input type="text" name="line1" autoComplete="address-line1" required maxLength={200} />
+                </label>
+                <label>
+                  Apartment, suite, etc. (optional)
+                  <input type="text" name="line2" autoComplete="address-line2" maxLength={200} />
                 </label>
               </div>
               <div className="form-row two-up">
                 <label>
                   City
-                  <input type="text" defaultValue="Phnom Penh" required />
+                  <input type="text" name="city" autoComplete="address-level2" required maxLength={100} />
                 </label>
                 <label>
-                  ZIP
-                  <input type="text" defaultValue="12000" required />
+                  Postal code
+                  <input type="text" name="postalCode" autoComplete="postal-code" maxLength={32} />
                 </label>
               </div>
               <div className="form-row">
                 <label>
                   Delivery notes
-                  <textarea rows={4} defaultValue="Please leave the parcel at the front desk if I am not home." />
+                  <textarea name="notes" rows={4} maxLength={1000} />
                 </label>
               </div>
             </div>
@@ -127,7 +207,7 @@ export default function CheckoutPage() {
               <div className="payment-card">
                 <div>
                   <div className="mini-label">Payment method</div>
-                  <h3>{paymentMethod}</h3>
+                  <h3>{paymentOptions.find((option) => option.value === paymentMethod)?.title}</h3>
                 </div>
                 <button type="button" className="button button-ghost" onClick={() => setIsModalOpen(true)}>
                   Select payment
@@ -135,8 +215,9 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <button type="submit" className="button button-dark checkout-submit">
-              Confirm demo order
+            {submitError && <p className="auth-alert error" role="alert">{submitError}</p>}
+            <button type="submit" className="button button-dark checkout-submit" disabled={isSubmitting}>
+              {isSubmitting ? "Preparing your order…" : "Place order"}
             </button>
           </form>
 
@@ -171,7 +252,7 @@ export default function CheckoutPage() {
             </div>
             <div className="summary-row total-row">
               <span>Total</span>
-              <strong>${total.toFixed(2)}</strong>
+              <strong>${(subtotal + shipping).toFixed(2)}</strong>
             </div>
           </aside>
         </div>
@@ -210,11 +291,24 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            <p className="demo-note compact-note">
-              This is a demo-only interface. No real payment is processed or authorized here.
-            </p>
           </div>
         </div>
+      )}
+
+      {payWayCheckout && (
+        <form
+          ref={payWayFormRef}
+          action={payWayCheckout.action}
+          method="POST"
+          className="payway-redirect-form"
+          aria-label="Redirecting to ABA PayWay"
+        >
+          {Object.entries(payWayCheckout.fields).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} />
+          ))}
+          <p>Redirecting securely to ABA PayWay…</p>
+          <button type="submit" className="button button-dark">Continue to payment</button>
+        </form>
       )}
     </main>
   );
