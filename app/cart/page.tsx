@@ -2,13 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { changeCartQuantity, clearCart, getCart } from "@/lib/cart";
+import { changeCartQuantity, clearCart, useCart } from "@/lib/cart";
 import { products } from "@/lib/products";
 
 export default function CartPage() {
-  const [cart, setCart] = useState<Record<number, number>>(() => getCart());
+  const cart = useCart();
 
   const cartItems = useMemo(
     () => products.filter((product) => (cart[product.id] || 0) > 0),
@@ -24,13 +24,11 @@ export default function CartPage() {
   const total = subtotal + shipping;
 
   function handleQuantityChange(productId: number, amount: number) {
-    const nextCart = changeCartQuantity(productId, amount);
-    setCart(nextCart);
+    changeCartQuantity(productId, amount);
   }
 
   function handleClearCart() {
     clearCart();
-    setCart({});
   }
 
   return (

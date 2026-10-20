@@ -93,7 +93,7 @@ export const products: Product[] = [
     detail:
       "This rich overnight cream supports skin while you rest, helping you wake up comfortable, smooth, and beautifully rested.",
     image:
-      "https://images.unsplash.com/photo-1570194065650-d99fb4bedf0a?auto=format&fit=crop&w=800&q=85",
+      "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=1600&q=90",
     tag: "NIGHT RITUAL",
     benefits: ["Overnight repair", "Silky texture", "Restorative comfort"],
   },

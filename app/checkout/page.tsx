@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { changeCartQuantity, clearCart, getCart, getCartCount } from "@/lib/cart";
+import { changeCartQuantity, clearCart, getCartCount, useCart } from "@/lib/cart";
 import { products } from "@/lib/products";
 
 type PayWayCheckout = {
@@ -27,7 +27,7 @@ const paymentOptions = [
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const [cart, setCart] = useState<Record<number, number>>(() => getCart());
+  const cart = useCart();
   const [paymentMethod, setPaymentMethod] = useState<(typeof paymentOptions)[number]["value"]>("aba_payway");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,8 +49,7 @@ export default function CheckoutPage() {
   const shipping = cartItems.length > 0 ? 8 : 0;
 
   function handleQuantityChange(productId: number, amount: number) {
-    const nextCart = changeCartQuantity(productId, amount);
-    setCart(nextCart);
+    changeCartQuantity(productId, amount);
   }
 
   useEffect(() => {
@@ -112,7 +111,6 @@ export default function CheckoutPage() {
 
       if (paymentMethod === "cash_on_delivery") {
         clearCart();
-        setCart({});
         router.push(`/confirmation?order=${encodeURIComponent(resultData.orderNumber)}`);
         return;
       }

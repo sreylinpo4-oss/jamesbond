@@ -251,6 +251,41 @@ export async function resetPasswordAction(
   redirect("/auth/login?message=" + encodeURIComponent("Your password has been reset. Please sign in with your new password."));
 }
 
+export async function changeEmailAction(
+  prevState: AuthActionResult | null,
+  formData: FormData
+): Promise<AuthActionResult> {
+  const email = formData.get("email")?.toString().trim().toLowerCase();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Please provide a valid email address." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/auth/login?next=/account");
+  }
+
+  if (email === user.email?.toLowerCase()) {
+    return { error: "That is already your current email address." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ email });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {
+    success: true,
+    message: "Email change requested. Check your inbox for a confirmation email.",
+  };
+}
+
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();

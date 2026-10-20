@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
-import { addToCart, changeCartQuantity, getCart, getCartCount } from "@/lib/cart";
+import { addToCart, changeCartQuantity, getCartCount, useCart } from "@/lib/cart";
 import { categories, products, type Product } from "@/lib/products";
 
 const ritualHighlights = [
@@ -28,11 +28,12 @@ const ritualHighlights = [
 export default function Home() {
     const [category, setCategory] = useState("All");
     const [search, setSearch] = useState("");
-    const [cart, setCart] = useState<Record<number, number>>(() => getCart());
+    const cart = useCart();
     const [cartOpen, setCartOpen] = useState(false);
     const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [notice, setNotice] = useState("");
+    const searchInputRef = useRef<HTMLInputElement>(null);
     const previewPanelRef = useRef<HTMLElement>(null);
     const previewTriggerRef = useRef<HTMLAnchorElement>(null);
 
@@ -56,15 +57,13 @@ export default function Home() {
     );
 
     function addToCartItem(product: Product) {
-        const nextCart = addToCart(product.id);
-        setCart(nextCart);
+        addToCart(product.id);
         setNotice(`${product.name} added to your bag 🌿`);
         window.setTimeout(() => setNotice(""), 2500);
     }
 
     function changeQuantity(id: number, amount: number) {
-        const nextCart = changeCartQuantity(id, amount);
-        setCart(nextCart);
+        changeCartQuantity(id, amount);
     }
 
     function openProductPreview(event: MouseEvent<HTMLAnchorElement>, product: Product) {
@@ -109,7 +108,7 @@ export default function Home() {
 
     function addPreviewProductToCart() {
         if (!previewProduct) return;
-        setCart(addToCart(previewProduct.id));
+        addToCart(previewProduct.id);
         setNotice(`${previewProduct.name} added to your bag 🌿`);
     }
 
@@ -153,6 +152,7 @@ export default function Home() {
                             document.getElementById("shop")?.scrollIntoView({
                                 behavior: "smooth",
                             });
+                            searchInputRef.current?.focus({ preventScroll: true });
                             setMenuOpen(false);
                         }}
                         aria-label="Search products"
@@ -264,7 +264,7 @@ export default function Home() {
                 </div>
 
                 <div className="shop-controls">
-                    <div className="category-tabs" aria-label="Filter by category">
+                    <div className="category-tabs" role="group" aria-label="Filter by category">
                         {categories.map((item) => (
                             <button
                                 key={item}
@@ -278,6 +278,7 @@ export default function Home() {
                     <label className="search-box">
                         <span>⌕</span>
                         <input
+                            ref={searchInputRef}
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
                             placeholder="Find your favorite..."

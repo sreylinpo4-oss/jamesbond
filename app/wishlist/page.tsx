@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { addToCart } from "@/lib/cart";
 import { products } from "@/lib/products";
-import { getWishlist, toggleWishlist } from "@/lib/wishlist";
+import { toggleWishlist, useWishlist } from "@/lib/wishlist";
 
 export default function WishlistPage() {
-  const [favoriteIds, setFavoriteIds] = useState<number[]>(() => getWishlist());
+  const favoriteIds = useWishlist();
 
   const savedProducts = useMemo(
     () => products.filter((product) => favoriteIds.includes(product.id)),
@@ -17,7 +17,7 @@ export default function WishlistPage() {
   );
 
   function handleToggle(productId: number) {
-    setFavoriteIds(toggleWishlist(productId));
+    toggleWishlist(productId);
   }
 
   function handleAddToCart(productId: number) {

@@ -47,7 +47,7 @@ export async function GET() {
       supabase.from("inventory").select("product_id,warehouse_id,quantity,low_stock_threshold"),
       supabase
         .from("orders")
-        .select("order_number,customer_name,customer_email,created_at,total_cents,status,order_items(product_name,quantity)")
+        .select("order_number,customer_name,customer_email,created_at,total_cents,status,order_items(product_name,quantity),order_tracking_updates(status,location,note,created_at)")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase
@@ -96,6 +96,14 @@ export async function GET() {
     items: (order.order_items ?? []).map(
       (item) => `${item.product_name} × ${item.quantity}`,
     ),
+    trackingUpdates: (order.order_tracking_updates ?? [])
+      .map((update) => ({
+        status: update.status,
+        location: update.location,
+        note: update.note,
+        createdAt: update.created_at,
+      }))
+      .sort((first, second) => second.createdAt.localeCompare(first.createdAt)),
   }));
 
   const data: AdminStoreData = {

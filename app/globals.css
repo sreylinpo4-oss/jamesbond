@@ -570,11 +570,14 @@ h2 em {
 }
 
 .product-card {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
 .product-image-wrap {
   position: relative;
+  display: block;
   overflow: hidden;
   aspect-ratio: 0.86;
   background: #eeede3;
@@ -637,9 +640,15 @@ h2 em {
 
 .product-info {
   display: flex;
+  flex: 1;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 10px;
   padding: 16px 0 12px;
+}
+
+.product-info > div {
+  min-width: 0;
 }
 
 .product-category {
@@ -671,14 +680,14 @@ h2 em {
 }
 
 .add-button {
-  width: 100%;
+  width: auto;
+  flex: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
   background: transparent;
   border: 0;
-  border-top: 1px solid var(--line);
   color: var(--forest);
   font-size: 10px;
   text-align: left;
@@ -701,7 +710,7 @@ h2 em {
 }
 
 .product-link {
-  margin-right: 2px;
+  margin: 0;
   white-space: nowrap;
 }
 
@@ -1959,6 +1968,22 @@ h2 em {
 
   .product-info h3 {
     font-size: 14px;
+  }
+
+  .product-card-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .add-button {
+    flex: initial;
+    min-height: 38px;
+  }
+
+  .product-link {
+    align-self: flex-start;
+    padding-bottom: 12px;
   }
 
   .category-tab {
@@ -3483,6 +3508,59 @@ h2 em {
   justify-items: start;
 }
 
+.tracking-admin {
+  display: grid;
+  gap: 8px;
+  width: min(260px, 100%);
+}
+
+.tracking-admin > p {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  color: var(--forest);
+  font-size: 10px;
+}
+
+.tracking-admin > p span,
+.tracking-admin > p time,
+.tracking-admin-empty {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.tracking-update-form {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  padding: 12px;
+  background: #f8f7f0;
+  border: 1px solid rgba(52, 72, 58, 0.1);
+}
+
+.tracking-update-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--forest);
+  font-size: 10px;
+}
+
+.tracking-update-form input,
+.tracking-update-form select,
+.tracking-update-form textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(52, 72, 58, 0.16);
+  background: #fffef9;
+  color: var(--ink);
+  font: inherit;
+}
+
+.tracking-update-form textarea {
+  resize: vertical;
+}
+
 .label-button {
   min-height: 30px;
   font-size: 9px;
@@ -4013,6 +4091,10 @@ h2 em {
   font-size: 13px;
 }
 
+.account-email-form {
+  display: block;
+}
+
 .detail-label {
   color: var(--muted);
   font-size: 12px;
@@ -4063,6 +4145,71 @@ h2 em {
   color: var(--muted);
   font-size: 13px;
   margin-bottom: 20px;
+}
+
+.order-tracking-card {
+  padding: 14px 0;
+  border-bottom: 1px solid #f2eee8;
+}
+
+.order-tracking-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-tracking-heading > div {
+  display: grid;
+  gap: 5px;
+}
+
+.order-tracking-timeline {
+  display: grid;
+  gap: 0;
+  margin: 14px 0 0;
+  padding: 0 0 0 12px;
+  list-style: none;
+  border-left: 1px solid #dce4d5;
+}
+
+.order-tracking-timeline li {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 0 0 14px 12px;
+  font-size: 12px;
+}
+
+.order-tracking-timeline li:last-child {
+  padding-bottom: 0;
+}
+
+.order-tracking-timeline li::before {
+  position: absolute;
+  top: 4px;
+  left: -16px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage-dark);
+  content: "";
+}
+
+.order-tracking-timeline li > span,
+.order-tracking-timeline time,
+.order-tracking-empty {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.order-tracking-timeline li > p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.order-tracking-empty {
+  margin-top: 12px !important;
 }
 
 .shop-now-btn {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/app/auth/actions";
+import ChangeEmailForm from "./ChangeEmailForm";
 
 export const instant = false;
 
@@ -23,7 +24,7 @@ export default async function AccountPage() {
 
   const { data: orders, error: ordersError } = await supabase
     .from("orders")
-    .select("order_number,status,payment_status,currency,total_cents,created_at")
+    .select("order_number,status,payment_status,currency,total_cents,created_at,order_tracking_updates(status,location,note,created_at)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -98,6 +99,10 @@ export default async function AccountPage() {
               <strong className="detail-value">{user.email}</strong>
             </div>
 
+            <div className="detail-item account-email-form">
+              <ChangeEmailForm currentEmail={user.email || ""} />
+            </div>
+
             <div className="detail-item">
               <span className="detail-label">Account Tier</span>
               <span className="tier-badge">
@@ -123,16 +128,44 @@ export default async function AccountPage() {
               <p role="alert">Order history could not be loaded. Please refresh this page.</p>
             ) : orders?.length ? (
               orders.map((order) => (
-                <div className="detail-item" key={order.order_number}>
-                  <span>
-                    <strong>{order.order_number}</strong>
-                    <br />
-                    <span className="detail-label">{order.status} · Payment {order.payment_status}</span>
-                  </span>
-                  <strong className="detail-value">
-                    {order.currency} {(order.total_cents / 100).toFixed(2)}
-                  </strong>
-                </div>
+                <article className="order-tracking-card" key={order.order_number}>
+                  <div className="order-tracking-heading">
+                    <div>
+                      <strong>{order.order_number}</strong>
+                      <span className="detail-label">
+                        {order.status} · Payment {order.payment_status}
+                      </span>
+                    </div>
+                    <strong className="detail-value">
+                      {order.currency} {(order.total_cents / 100).toFixed(2)}
+                    </strong>
+                  </div>
+                  {order.order_tracking_updates?.length ? (
+                    <ol className="order-tracking-timeline">
+                      {[...order.order_tracking_updates]
+                        .sort((first, second) =>
+                          second.created_at.localeCompare(first.created_at),
+                        )
+                        .map((update, index) => (
+                          <li key={`${update.created_at}-${index}`}>
+                            <strong>{update.status}</strong>
+                            <span>{update.location}</span>
+                            {update.note && <p>{update.note}</p>}
+                            <time dateTime={update.created_at}>
+                              {new Date(update.created_at).toLocaleString("en-US", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })}
+                            </time>
+                          </li>
+                        ))}
+                    </ol>
+                  ) : (
+                    <p className="order-tracking-empty">
+                      Tracking updates will appear here when your order is being prepared.
+                    </p>
+                  )}
+                </article>
               ))
             ) : (
               <div className="orders-empty">

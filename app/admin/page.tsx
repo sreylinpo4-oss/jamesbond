@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import {
   ORDER_STATUSES,
+  TRACKING_STATUSES,
   type AdminOrder,
   type AdminStoreData,
   type DiscountKind,
   type DiscountRule,
   type FulfillmentStatus,
   type InventoryItem,
+  type OrderTrackingUpdate,
+  type TrackingStatus,
   type Warehouse,
 } from "@/lib/admin-store";
 
@@ -122,6 +125,11 @@ export default function AdminPage() {
   const [notice, setNotice] = useState("");
   const [newWarehouseName, setNewWarehouseName] = useState("");
   const [newWarehouseLocation, setNewWarehouseLocation] = useState("");
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus>("Preparing");
+  const [trackingLocation, setTrackingLocation] = useState("");
+  const [trackingNote, setTrackingNote] = useState("");
+  const [isSavingTracking, setIsSavingTracking] = useState(false);
   const [discountName, setDiscountName] = useState("");
   const [discountKind, setDiscountKind] = useState<DiscountKind>("Coupon");
   const [discountValue, setDiscountValue] = useState("");
@@ -253,6 +261,77 @@ export default function AdminPage() {
         order.id === orderId ? { ...order, status } : order,
       ),
     }));
+  }
+
+  function toggleTrackingForm(order: AdminOrder) {
+    if (trackingOrderId === order.id) {
+      setTrackingOrderId(null);
+      return;
+    }
+
+    setTrackingOrderId(order.id);
+    setTrackingStatus(order.trackingUpdates[0]?.status ?? "Preparing");
+    setTrackingLocation("");
+    setTrackingNote("");
+  }
+
+  async function saveTrackingUpdate(event: FormEvent<HTMLFormElement>, order: AdminOrder) {
+    event.preventDefault();
+    setIsSavingTracking(true);
+    try {
+      const response = await fetch("/api/admin/orders/tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderNumber: order.id,
+          status: trackingStatus,
+          location: trackingLocation,
+          note: trackingNote,
+        }),
+      });
+      const result: unknown = await response.json();
+      if (!result || typeof result !== "object") {
+        throw new Error("The shipment service returned an invalid response.");
+      }
+      const resultData = result as { error?: unknown; update?: OrderTrackingUpdate };
+      const update = resultData.update;
+      if (!response.ok || !update) {
+        throw new Error(
+          typeof resultData.error === "string"
+            ? resultData.error
+            : "The shipment update could not be saved.",
+        );
+      }
+
+      setData((current) => {
+        const next = {
+          ...current,
+          orders: current.orders.map((currentOrder) =>
+            currentOrder.id === order.id
+              ? {
+                  ...currentOrder,
+                  trackingUpdates: [
+                    update,
+                    ...currentOrder.trackingUpdates,
+                  ],
+                }
+              : currentOrder,
+          ),
+        };
+        persistedData.current = next;
+        return next;
+      });
+      setTrackingOrderId(null);
+      setTrackingLocation("");
+      setTrackingNote("");
+      setNotice(`Tracking update saved for ${order.id}.`);
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "The shipment update could not be saved.",
+      );
+    } finally {
+      setIsSavingTracking(false);
+    }
   }
 
   function createShippingLabel(order: AdminOrder) {
@@ -654,7 +733,7 @@ export default function AdminPage() {
             <div className="admin-toolbar">
               <div>
                 <span className="mini-label">ORDER & FULFILLMENT MANAGEMENT</span>
-                <p>Track the order lifecycle and prepare demo shipping documents.</p>
+                <p>Update each shipment&apos;s status and location for customers to see in their account.</p>
               </div>
               <span className="admin-result-count">{data.orders.length} orders</span>
             </div>
@@ -662,7 +741,7 @@ export default function AdminPage() {
               <div className="admin-table-scroll">
                 <table className="admin-table order-admin-table">
                   <thead>
-                    <tr><th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th>Fulfillment</th></tr>
+                    <tr><th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th>Fulfillment &amp; tracking</th></tr>
                   </thead>
                   <tbody>
                     {data.orders.map((order) => (
@@ -683,6 +762,73 @@ export default function AdminPage() {
                               </select>
                             )}
                             <button type="button" className="admin-button secondary label-button" onClick={() => createShippingLabel(order)}>Shipping label</button>
+                            <div className="tracking-admin">
+                              {order.trackingUpdates[0] ? (
+                                <p>
+                                  <strong>{order.trackingUpdates[0].status}</strong>
+                                  <span>{order.trackingUpdates[0].location}</span>
+                                  <time dateTime={order.trackingUpdates[0].createdAt}>
+                                    {new Date(order.trackingUpdates[0].createdAt).toLocaleString()}
+                                  </time>
+                                </p>
+                              ) : (
+                                <p className="tracking-admin-empty">No shipment updates yet</p>
+                              )}
+                              <button
+                                type="button"
+                                className="admin-button secondary label-button"
+                                onClick={() => toggleTrackingForm(order)}
+                              >
+                                {trackingOrderId === order.id ? "Close tracking form" : "Update location"}
+                              </button>
+                              {trackingOrderId === order.id && (
+                                <form
+                                  className="tracking-update-form"
+                                  onSubmit={(event) => void saveTrackingUpdate(event, order)}
+                                >
+                                  <label>
+                                    Shipment status
+                                    <select
+                                      value={trackingStatus}
+                                      onChange={(event) =>
+                                        setTrackingStatus(event.target.value as TrackingStatus)
+                                      }
+                                    >
+                                      {TRACKING_STATUSES.map((status) => (
+                                        <option key={status} value={status}>{status}</option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                  <label>
+                                    Current location
+                                    <input
+                                      value={trackingLocation}
+                                      onChange={(event) => setTrackingLocation(event.target.value)}
+                                      maxLength={160}
+                                      placeholder="e.g. Phnom Penh sorting center"
+                                      required
+                                    />
+                                  </label>
+                                  <label>
+                                    Note for customer (optional)
+                                    <textarea
+                                      value={trackingNote}
+                                      onChange={(event) => setTrackingNote(event.target.value)}
+                                      maxLength={500}
+                                      rows={2}
+                                      placeholder="Add a short delivery update"
+                                    />
+                                  </label>
+                                  <button
+                                    type="submit"
+                                    className="admin-button primary"
+                                    disabled={isSavingTracking}
+                                  >
+                                    {isSavingTracking ? "Saving update…" : "Publish update"}
+                                  </button>
+                                </form>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -691,7 +837,7 @@ export default function AdminPage() {
                 </table>
               </div>
             </article>
-            <p className="admin-help-note">Shipping label files are clearly marked demo-only and are not accepted by carriers. Real fulfillment needs a shipping provider integration.</p>
+            <p className="admin-help-note">Shipment updates are entered manually and appear in the customer&apos;s account order history. Shipping label files are demo-only and are not accepted by carriers.</p>
           </section>
         )}
 

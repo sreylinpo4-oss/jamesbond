@@ -20,6 +20,24 @@ export type FulfillmentStatus =
   | "Delivered"
   | "Cancelled";
 
+export const TRACKING_STATUSES = [
+  "Preparing",
+  "Shipped",
+  "In transit",
+  "Out for delivery",
+  "Delivered",
+  "Delayed",
+] as const;
+
+export type TrackingStatus = (typeof TRACKING_STATUSES)[number];
+
+export type OrderTrackingUpdate = {
+  status: TrackingStatus;
+  location: string;
+  note: string;
+  createdAt: string;
+};
+
 export type AdminOrder = {
   id: string;
   customer: string;
@@ -28,6 +46,7 @@ export type AdminOrder = {
   total: number;
   status: FulfillmentStatus;
   items: string[];
+  trackingUpdates: OrderTrackingUpdate[];
 };
 
 export type DiscountKind =

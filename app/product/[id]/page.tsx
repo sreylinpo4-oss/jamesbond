@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, use, useMemo, useState } from "react";
+import { Suspense, use, useMemo } from "react";
 
-import { addToCart, getCartCount } from "@/lib/cart";
+import { addToCart, getCartCount, useCart } from "@/lib/cart";
 import { getProductById, products } from "@/lib/products";
+import { toggleWishlist, useWishlist } from "@/lib/wishlist";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   return (
@@ -19,7 +20,9 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const productId = Number(id);
   const product = useMemo(() => getProductById(productId), [productId]);
-  const [cartCount, setCartCount] = useState<number>(() => getCartCount());
+  const cart = useCart();
+  const cartCount = getCartCount(cart);
+  const wishlist = useWishlist();
 
   if (!product) {
     return (
@@ -40,7 +43,6 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
 
   function handleAddToCart() {
     addToCart(currentProduct.id);
-    setCartCount(getCartCount());
   }
 
   return (
@@ -80,6 +82,19 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
           <div className="detail-actions">
             <button className="button button-dark" onClick={handleAddToCart}>
               Add to bag <span>↗</span>
+            </button>
+            <button
+              type="button"
+              className="button button-ghost"
+              aria-pressed={wishlist.includes(product.id)}
+              onClick={() => toggleWishlist(product.id)}
+            >
+              <span aria-hidden="true">
+                {wishlist.includes(product.id) ? "♥" : "♡"}
+              </span>
+              {wishlist.includes(product.id)
+                ? "Saved to wishlist"
+                : "Save to wishlist"}
             </button>
             <Link href="/" className="text-link">
               Continue shopping ↗

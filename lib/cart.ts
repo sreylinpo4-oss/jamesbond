@@ -1,18 +1,75 @@
+import { useSyncExternalStore } from "react";
+import { useHasHydrated } from "@/lib/hydration";
+
 const CART_KEY = "floralyn-cart";
 
 export type CartState = Record<number, number>;
 
-export function getCart(): CartState {
-  if (typeof window === "undefined") {
-    return {};
+const emptyCart: CartState = Object.freeze({});
+const cartListeners = new Set<() => void>();
+let cachedCartJson: string | null | undefined;
+let cachedCart: CartState = emptyCart;
+
+function readCart(json: string | null): CartState {
+  try {
+    return json ? (JSON.parse(json) as CartState) : emptyCart;
+  } catch {
+    return emptyCart;
+  }
+}
+
+function getCartSnapshot(): CartState {
+  if (typeof window === "undefined") return emptyCart;
+
+  let json: string | null;
+  try {
+    json = window.localStorage.getItem(CART_KEY);
+  } catch {
+    json = null;
   }
 
-  try {
-    const saved = window.localStorage.getItem(CART_KEY);
-    return saved ? (JSON.parse(saved) as CartState) : {};
-  } catch {
-    return {};
+  if (json !== cachedCartJson) {
+    cachedCartJson = json;
+    cachedCart = readCart(json);
   }
+  return cachedCart;
+}
+
+function getServerCartSnapshot(): CartState {
+  return emptyCart;
+}
+
+function subscribeToCart(listener: () => void) {
+  cartListeners.add(listener);
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === CART_KEY || event.key === null) {
+      cachedCartJson = undefined;
+      listener();
+    }
+  };
+  window.addEventListener("storage", handleStorage);
+  return () => {
+    cartListeners.delete(listener);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
+
+function notifyCartChanged() {
+  for (const listener of cartListeners) listener();
+}
+
+export function useCart(): CartState {
+  const cart = useSyncExternalStore(
+    subscribeToCart,
+    getCartSnapshot,
+    getServerCartSnapshot,
+  );
+
+  return useHasHydrated() ? cart : emptyCart;
+}
+
+export function getCart(): CartState {
+  return getCartSnapshot();
 }
 
 export function saveCart(cart: CartState) {
@@ -20,7 +77,11 @@ export function saveCart(cart: CartState) {
     return;
   }
 
-  window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  const json = JSON.stringify(cart);
+  window.localStorage.setItem(CART_KEY, json);
+  cachedCartJson = json;
+  cachedCart = cart;
+  notifyCartChanged();
 }
 
 export function addToCart(productId: number) {

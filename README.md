@@ -11,7 +11,7 @@ Floralyn Skin is a Next.js storefront with Supabase authentication and a Supabas
    ```
 
 2. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase project. Keep every value not prefixed with `NEXT_PUBLIC_` server-side; never commit `.env.local`.
-3. Apply every SQL file in `supabase/migrations` in timestamp order, including the auth schema before the commerce backend, using the Supabase SQL editor or Supabase CLI.
+3. Apply every SQL file in `supabase/migrations` in timestamp order, including the auth schema before the commerce backend and the order-tracking migration, using the Supabase SQL editor or Supabase CLI.
 4. Create or sign in to the account that should manage the store. Find its user UUID in Supabase Authentication, then promote it from the SQL editor:
 
    ```sql
@@ -37,6 +37,6 @@ Floralyn Skin is a Next.js storefront with Supabase authentication and a Supabas
 
 ## Current scope
 
-The admin dashboard reads and writes inventory, warehouse, order-status, and promotion records through authenticated Supabase endpoints. Promotion rules are stored but are not yet applied to checkout pricing. Catalog browsing still uses the storefront's bundled product list; checkout pricing and availability are independently enforced against database products and inventory.
+The admin dashboard reads and writes inventory, warehouse, order-status, shipment tracking, and promotion records through authenticated Supabase endpoints. Shipment status and location updates are entered manually in **Admin → Orders & fulfillment** and appear in the customer's account order history. Promotion rules are stored but are not yet applied to checkout pricing. Catalog browsing still uses the storefront's bundled product list; checkout pricing and availability are independently enforced against database products and inventory.
 
 Run `npm run lint` and `npm run build` to validate the application.
