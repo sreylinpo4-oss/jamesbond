@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, use, useMemo } from "react";
+import { Suspense, use, useEffect, useMemo, useState } from "react";
 
 import { addToCart, getCartCount, useCart } from "@/lib/cart";
-import { getProductById, products } from "@/lib/products";
+import { mergeCatalog, products, type Product } from "@/lib/products";
 import { toggleWishlist, useWishlist } from "@/lib/wishlist";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,10 +19,30 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const productId = Number(id);
-  const product = useMemo(() => getProductById(productId), [productId]);
+  const [catalog, setCatalog] = useState<Product[]>(products);
   const cart = useCart();
   const cartCount = getCartCount(cart);
   const wishlist = useWishlist();
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && Array.isArray(data?.products) && data.products.length > 0) {
+          setCatalog(mergeCatalog(data.products));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const product = useMemo(
+    () => catalog.find((item) => item.id === productId),
+    [catalog, productId],
+  );
 
   if (!product) {
     return (
@@ -40,9 +60,12 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
   }
 
   const currentProduct = product;
+  const [addedNotice, setAddedNotice] = useState(false);
 
   function handleAddToCart() {
     addToCart(currentProduct.id);
+    setAddedNotice(true);
+    setTimeout(() => setAddedNotice(false), 2200);
   }
 
   return (
@@ -55,7 +78,7 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
             <small>BOTANICAL SKINCARE</small>
           </span>
         </Link>
-        <Link href="/checkout" className="bag-button detail-bag-button">
+        <Link href="/cart" className="bag-button detail-bag-button">
           Bag <span className="bag-count">{cartCount}</span>
         </Link>
       </header>
@@ -74,14 +97,24 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
         </div>
 
         <div className="detail-copy">
-          <div className="eyebrow">{product.category}</div>
+          <div className="eyebrow">
+            {product.brand ? `${product.brand} · ${product.category}` : product.category}
+          </div>
           <h1>{product.name}</h1>
+          {product.role && (
+            <div className="product-role-tag" style={{ display: "inline-block", margin: "6px 0 12px" }}>
+              ✦ Role & Function: {product.role}
+            </div>
+          )}
           <p className="detail-price">${product.price.toFixed(2)}</p>
           <p className="detail-description">{product.detail}</p>
 
           <div className="detail-actions">
-            <button className="button button-dark" onClick={handleAddToCart}>
-              Add to bag <span>↗</span>
+            <button
+              className={`button button-dark ${addedNotice ? "button-success" : ""}`}
+              onClick={handleAddToCart}
+            >
+              {addedNotice ? "Added to bag! ✓" : "Add to bag"} <span>↗</span>
             </button>
             <button
               type="button"
@@ -117,7 +150,7 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </div>
         <div className="product-grid related-grid">
-          {products
+          {catalog
             .filter((item) => item.id !== product.id)
             .slice(0, 3)
             .map((item) => (

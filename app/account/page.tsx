@@ -24,7 +24,7 @@ export default async function AccountPage() {
 
   const { data: orders, error: ordersError } = await supabase
     .from("orders")
-    .select("order_number,status,payment_status,currency,total_cents,created_at,order_tracking_updates(status,location,note,created_at)")
+    .select("order_number,status,payment_status,currency,total_cents,discount_cents,discount_code,created_at,order_tracking_updates(status,location,note,created_at)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -53,7 +53,7 @@ export default async function AccountPage() {
             My Account
           </Link>
         </nav>
-        <Link className="bag" href="/#cart">
+        <Link className="bag" href="/cart">
           ♡ Bag
         </Link>
       </header>
@@ -134,6 +134,7 @@ export default async function AccountPage() {
                       <strong>{order.order_number}</strong>
                       <span className="detail-label">
                         {order.status} · Payment {order.payment_status}
+                        {order.discount_code ? ` · Promo ${order.discount_code}` : ""}
                       </span>
                     </div>
                     <strong className="detail-value">

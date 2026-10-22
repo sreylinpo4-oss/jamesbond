@@ -47,7 +47,7 @@ export async function GET() {
       supabase.from("inventory").select("product_id,warehouse_id,quantity,low_stock_threshold"),
       supabase
         .from("orders")
-        .select("order_number,customer_name,customer_email,created_at,total_cents,status,order_items(product_name,quantity),order_tracking_updates(status,location,note,created_at)")
+        .select("order_number,customer_name,customer_email,created_at,total_cents,status,payment_method,payment_status,discount_cents,discount_code,order_items(product_name,quantity),order_tracking_updates(status,location,note,created_at)")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase
@@ -86,25 +86,34 @@ export async function GET() {
     stockByWarehouse: stockByProduct.get(product.id) ?? {},
   }));
 
-  const orders: AdminOrder[] = (ordersResult.data ?? []).map((order) => ({
-    id: order.order_number,
-    customer: order.customer_name,
-    email: order.customer_email,
-    date: order.created_at,
-    total: order.total_cents / 100,
-    status: displayOrderStatus(order.status),
-    items: (order.order_items ?? []).map(
-      (item) => `${item.product_name} × ${item.quantity}`,
-    ),
-    trackingUpdates: (order.order_tracking_updates ?? [])
-      .map((update) => ({
-        status: update.status,
-        location: update.location,
-        note: update.note,
-        createdAt: update.created_at,
-      }))
-      .sort((first, second) => second.createdAt.localeCompare(first.createdAt)),
-  }));
+  const orders: AdminOrder[] = (ordersResult.data ?? []).map((order) => {
+    const rawOrder = order as Record<string, any>;
+    return {
+      id: rawOrder.order_number,
+      customer: rawOrder.customer_name,
+      email: rawOrder.customer_email,
+      date: rawOrder.created_at,
+      total: rawOrder.total_cents / 100,
+      status: displayOrderStatus(rawOrder.status),
+      paymentMethod: rawOrder.payment_method,
+      paymentStatus: rawOrder.payment_status,
+      discountCode: rawOrder.discount_code,
+      discountCents: rawOrder.discount_cents,
+      items: (rawOrder.order_items ?? []).map(
+        (item: Record<string, any>) => `${item.product_name} × ${item.quantity}`,
+      ),
+      trackingUpdates: (rawOrder.order_tracking_updates ?? [])
+        .map((update: Record<string, any>) => ({
+          status: update.status,
+          location: update.location,
+          note: update.note,
+          createdAt: update.created_at,
+        }))
+        .sort((first: { createdAt: string }, second: { createdAt: string }) =>
+          second.createdAt.localeCompare(first.createdAt),
+        ),
+    };
+  });
 
   const data: AdminStoreData = {
     warehouses: (warehousesResult.data ?? []).map((warehouse) => ({

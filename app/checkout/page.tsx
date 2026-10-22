@@ -1,11 +1,13 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { changeCartQuantity, clearCart, getCartCount, useCart } from "@/lib/cart";
-import { products } from "@/lib/products";
+import { saveAppliedPromo, useAppliedPromo } from "@/lib/discounts";
+import { mergeCatalog, products, type Product } from "@/lib/products";
+import { createClient } from "@/lib/supabase/client";
 
 type PayWayCheckout = {
   action: string;
@@ -28,6 +30,9 @@ const paymentOptions = [
 export default function CheckoutPage() {
   const router = useRouter();
   const cart = useCart();
+  const [catalog, setCatalog] = useState<Product[]>(products);
+  const [currentUser, setCurrentUser] = useState<{ email?: string; id?: string } | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<(typeof paymentOptions)[number]["value"]>("aba_payway");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,9 +41,48 @@ export default function CheckoutPage() {
   const payWayFormRef = useRef<HTMLFormElement>(null);
   const idempotencyKeyRef = useRef<string | null>(null);
 
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [promoSuccess, setPromoSuccess] = useState("");
+  const appliedPromo = useAppliedPromo();
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && Array.isArray(data?.products) && data.products.length > 0) {
+          setCatalog(mergeCatalog(data.products));
+        }
+      })
+      .catch(() => {});
+
+    try {
+      const supabase = createClient();
+      supabase.auth
+        .getUser()
+        .then(({ data: { user } }) => {
+          if (isMounted) {
+            setCurrentUser(user);
+            setIsAuthLoading(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setIsAuthLoading(false);
+        });
+    } catch {
+      if (isMounted) setIsAuthLoading(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const cartItems = useMemo(
-    () => products.filter((product) => (cart[product.id] || 0) > 0),
-    [cart],
+    () => catalog.filter((product) => (cart[product.id] || 0) > 0),
+    [catalog, cart],
   );
 
   const subtotal = useMemo(
@@ -46,7 +90,96 @@ export default function CheckoutPage() {
     [cart, cartItems],
   );
 
+  const discountDollars = (appliedPromo?.discountCents ?? 0) / 100;
   const shipping = cartItems.length > 0 ? 8 : 0;
+  const total = Math.max(0, subtotal - discountDollars + shipping);
+
+  // Re-verify promo when subtotal/items change
+  const appliedCode = appliedPromo?.code;
+  useEffect(() => {
+    if (!appliedCode) return;
+    const subtotalCents = Math.round(subtotal * 100);
+    const totalCount = getCartCount(cart);
+
+    fetch("/api/discounts/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: appliedCode,
+        subtotalCents,
+        itemCount: totalCount,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.valid) {
+          saveAppliedPromo({
+            code: data.code,
+            name: data.name,
+            discountCents: data.discount_cents,
+            message: data.message,
+          });
+        } else if (data?.requirementNotMet || data?.requirement_not_met) {
+          saveAppliedPromo({
+            code: appliedCode,
+            name: appliedPromo?.name || appliedCode,
+            discountCents: 0,
+            message: data.message,
+          });
+        } else if (totalCount > 0) {
+          saveAppliedPromo(null);
+        }
+      })
+      .catch(() => {});
+  }, [subtotal, cart, appliedCode, appliedPromo?.name]);
+
+  async function handleApplyPromo(event: FormEvent) {
+    event.preventDefault();
+    if (!promoInput.trim()) return;
+
+    setPromoLoading(true);
+    setPromoError("");
+    setPromoSuccess("");
+
+    try {
+      const subtotalCents = Math.round(subtotal * 100);
+      const totalCount = getCartCount(cart);
+      const response = await fetch("/api/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: promoInput.trim(),
+          subtotalCents,
+          itemCount: totalCount,
+        }),
+      });
+
+      const data = await response.json();
+      if (data?.valid) {
+        const promo = {
+          code: data.code,
+          name: data.name,
+          discountCents: data.discount_cents,
+          message: data.message,
+        };
+        saveAppliedPromo(promo);
+        setPromoSuccess(data.message || "Promo applied successfully!");
+        setPromoInput("");
+      } else {
+        setPromoError(data?.message || "Invalid promo code.");
+      }
+    } catch {
+      setPromoError("Unable to validate promo code. Please try again.");
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
+  function handleRemovePromo() {
+    saveAppliedPromo(null);
+    setPromoSuccess("");
+    setPromoError("");
+  }
 
   function handleQuantityChange(productId: number, amount: number) {
     changeCartQuantity(productId, amount);
@@ -72,6 +205,7 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           idempotencyKey: idempotencyKeyRef.current,
           paymentMethod,
+          discountCode: appliedPromo?.code ?? null,
           items: cartItems.map((product) => ({
             productId: product.id,
             quantity: cart[product.id],
@@ -108,6 +242,9 @@ export default function CheckoutPage() {
       if (typeof resultData.orderNumber !== "string") {
         throw new Error("The order service did not return an order number.");
       }
+
+      // Order placed successfully, clear discount
+      saveAppliedPromo(null);
 
       if (paymentMethod === "cash_on_delivery") {
         clearCart();
@@ -155,6 +292,30 @@ export default function CheckoutPage() {
       ) : (
         <div className="checkout-layout">
           <form className="checkout-form" onSubmit={handleSubmit}>
+            {!isAuthLoading && (
+              <div className={`checkout-auth-banner ${currentUser ? "signed-in" : "sign-in-prompt"}`}>
+                <span className="auth-banner-mark">{currentUser ? "✓" : "✿"}</span>
+                <div className="auth-banner-content">
+                  {currentUser ? (
+                    <>
+                      <strong>Account connected</strong>
+                      <small>Ordering as <em>{currentUser.email}</em>. Shipment updates will sync to your account.</small>
+                    </>
+                  ) : (
+                    <>
+                      <strong>Sign in to complete checkout</strong>
+                      <small>Orders require an account email for verification and live order tracking.</small>
+                    </>
+                  )}
+                </div>
+                {!currentUser && (
+                  <Link href={`/auth/login?next=${encodeURIComponent("/checkout")}`} className="button button-ghost banner-auth-btn">
+                    Sign in ↗
+                  </Link>
+                )}
+              </div>
+            )}
+
             <div className="form-section-block">
               <h2>Delivery details</h2>
               <div className="form-row">
@@ -202,18 +363,40 @@ export default function CheckoutPage() {
             </div>
 
             <div className="form-section-block">
-              <div className="payment-card">
-                <div>
-                  <div className="mini-label">Payment method</div>
-                  <h3>{paymentOptions.find((option) => option.value === paymentMethod)?.title}</h3>
-                </div>
-                <button type="button" className="button button-ghost" onClick={() => setIsModalOpen(true)}>
-                  Select payment
-                </button>
+              <h2>Payment method</h2>
+              <div className="payment-options-grid">
+                {paymentOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option.value}
+                    className={`payment-option-card ${paymentMethod === option.value ? "selected" : ""}`}
+                    onClick={() => setPaymentMethod(option.value)}
+                  >
+                    <div className="payment-option-radio" aria-hidden="true">
+                      <span className={paymentMethod === option.value ? "radio-dot active" : "radio-dot"} />
+                    </div>
+                    <div className="payment-option-details">
+                      <strong>{option.title}</strong>
+                      <small>{option.description}</small>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {submitError && <p className="auth-alert error" role="alert">{submitError}</p>}
+            {submitError && (
+              <div className="auth-alert error checkout-error-alert" role="alert">
+                <span>{submitError}</span>
+                {submitError.toLowerCase().includes("sign in") && (
+                  <Link
+                    href={`/auth/login?next=${encodeURIComponent("/checkout")}`}
+                    className="button button-dark error-sign-in-btn"
+                  >
+                    Sign in to your account ↗
+                  </Link>
+                )}
+              </div>
+            )}
             <button type="submit" className="button button-dark checkout-submit" disabled={isSubmitting}>
               {isSubmitting ? "Preparing your order…" : "Place order"}
             </button>
@@ -240,17 +423,65 @@ export default function CheckoutPage() {
               </div>
             ))}
 
+            <div className="checkout-promo-box">
+              {appliedPromo ? (
+                <div className="promo-applied-tag">
+                  <div className="promo-info">
+                    <span className="promo-sparkle">✦</span>
+                    <div>
+                      <strong>{appliedPromo.code}</strong>
+                      <small>{appliedPromo.name}</small>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="promo-remove-btn"
+                    onClick={handleRemovePromo}
+                    aria-label="Remove promo code"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <form className="promo-input-form" onSubmit={handleApplyPromo}>
+                  <input
+                    type="text"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value)}
+                    placeholder="Promo or coupon code"
+                    className="promo-input"
+                    maxLength={30}
+                  />
+                  <button
+                    type="submit"
+                    className="button button-ghost promo-apply-btn"
+                    disabled={promoLoading || !promoInput.trim()}
+                  >
+                    {promoLoading ? "Applying…" : "Apply"}
+                  </button>
+                </form>
+              )}
+              {promoError && <p className="promo-feedback error">{promoError}</p>}
+              {promoSuccess && !promoError && <p className="promo-feedback success">{promoSuccess}</p>}
+            </div>
+
             <div className="summary-row">
               <span>Subtotal</span>
               <strong>${subtotal.toFixed(2)}</strong>
             </div>
+            {discountDollars > 0 && (
+              <div className="summary-row discount-row">
+                <span>Discount ({appliedPromo?.code})</span>
+                <strong className="discount-amount">−${discountDollars.toFixed(2)}</strong>
+              </div>
+            )}
             <div className="summary-row">
               <span>Shipping</span>
               <strong>${shipping.toFixed(2)}</strong>
             </div>
             <div className="summary-row total-row">
               <span>Total</span>
-              <strong>${(subtotal + shipping).toFixed(2)}</strong>
+              <strong>${total.toFixed(2)}</strong>
             </div>
           </aside>
         </div>

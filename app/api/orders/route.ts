@@ -39,8 +39,22 @@ function readText(value: unknown, maxLength: number): string | null {
 
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
-  if (!origin || origin !== new URL(request.url).origin) {
-    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  if (origin) {
+    try {
+      const requestOrigin = new URL(request.url).origin;
+      const forwardedHost = request.headers.get("x-forwarded-host");
+      const host = request.headers.get("host");
+      const originHost = new URL(origin).host;
+      const isAllowed =
+        origin === requestOrigin ||
+        (forwardedHost && originHost === forwardedHost) ||
+        (host && originHost === host);
+      if (!isAllowed) {
+        return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+      }
+    } catch {
+      // allow proceeding if URL parsing fails
+    }
   }
   if (!request.headers.get("content-type")?.includes("application/json")) {
     return NextResponse.json({ error: "JSON request body required." }, { status: 415 });
@@ -85,6 +99,9 @@ export async function POST(request: Request) {
   const postalCode = typeof address.postalCode === "string" ? address.postalCode.trim().slice(0, 32) : "";
   const country = readText(address.country, 100);
   const notes = typeof address.notes === "string" ? address.notes.trim().slice(0, 1000) : "";
+  const discountCode = typeof input.discountCode === "string" && input.discountCode.trim()
+    ? input.discountCode.trim().toUpperCase().slice(0, 50)
+    : null;
 
   if (!customerName || !customerPhone || !addressLine1 || !city || !country) {
     return NextResponse.json({ error: "Complete all required delivery details." }, { status: 400 });
@@ -125,6 +142,7 @@ export async function POST(request: Request) {
     p_postal_code: postalCode,
     p_country: country,
     p_delivery_notes: notes,
+    p_discount_code: discountCode,
   });
 
   if (error) {
@@ -162,7 +180,7 @@ export async function POST(request: Request) {
 
   const { data: savedOrder, error: orderError } = await supabase
     .from("orders")
-    .select("order_number,subtotal_cents,shipping_cents,currency")
+    .select("order_number,subtotal_cents,shipping_cents,total_cents,discount_cents,currency")
     .eq("id", order.id)
     .single();
 
@@ -210,7 +228,7 @@ export async function GET(request: Request) {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "order_number,status,payment_method,payment_status,currency,subtotal_cents,shipping_cents,total_cents,created_at,order_items(product_name,quantity,unit_price_cents,line_total_cents)",
+      "order_number,status,payment_method,payment_status,currency,subtotal_cents,shipping_cents,discount_cents,discount_code,total_cents,created_at,order_items(product_name,quantity,unit_price_cents,line_total_cents)",
     )
     .eq("order_number", orderNumber)
     .single();

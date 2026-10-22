@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
@@ -14,6 +14,8 @@ type OrderDetails = {
   currency: string;
   subtotal_cents: number;
   shipping_cents: number;
+  discount_cents?: number;
+  discount_code?: string | null;
   total_cents: number;
   order_items: {
     product_name: string;
@@ -130,6 +132,12 @@ function ConfirmationDetails() {
                 <strong>{order.currency} {(item.line_total_cents / 100).toFixed(2)}</strong>
               </div>
             ))}
+            {typeof order.discount_cents === "number" && order.discount_cents > 0 && (
+              <div className="summary-row discount-row">
+                <span>Discount {order.discount_code ? `(${order.discount_code})` : ""}</span>
+                <strong className="discount-amount">−{order.currency} {(order.discount_cents / 100).toFixed(2)}</strong>
+              </div>
+            )}
             <div className="summary-row">
               <span>Shipping</span>
               <strong>{order.currency} {(order.shipping_cents / 100).toFixed(2)}</strong>

@@ -1,18 +1,40 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { changeCartQuantity, clearCart, useCart } from "@/lib/cart";
-import { products } from "@/lib/products";
+import { changeCartQuantity, clearCart, getCartCount, useCart } from "@/lib/cart";
+import { saveAppliedPromo, useAppliedPromo } from "@/lib/discounts";
+import { mergeCatalog, products, type Product } from "@/lib/products";
 
 export default function CartPage() {
   const cart = useCart();
+  const [catalog, setCatalog] = useState<Product[]>(products);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [promoSuccess, setPromoSuccess] = useState("");
+  const appliedPromo = useAppliedPromo();
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && Array.isArray(data?.products) && data.products.length > 0) {
+          setCatalog(mergeCatalog(data.products));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const cartItems = useMemo(
-    () => products.filter((product) => (cart[product.id] || 0) > 0),
-    [cart],
+    () => catalog.filter((product) => (cart[product.id] || 0) > 0),
+    [catalog, cart],
   );
 
   const subtotal = useMemo(
@@ -20,8 +42,96 @@ export default function CartPage() {
     [cart, cartItems],
   );
 
-  const shipping = cartItems.length > 0 ? 12 : 0;
-  const total = subtotal + shipping;
+  const discountDollars = (appliedPromo?.discountCents ?? 0) / 100;
+  const shipping = cartItems.length > 0 ? 8 : 0;
+  const total = Math.max(0, subtotal - discountDollars + shipping);
+
+  // Re-verify promo when subtotal/items change
+  const appliedCode = appliedPromo?.code;
+  useEffect(() => {
+    if (!appliedCode) return;
+    const subtotalCents = Math.round(subtotal * 100);
+    const totalCount = getCartCount(cart);
+
+    fetch("/api/discounts/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: appliedCode,
+        subtotalCents,
+        itemCount: totalCount,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.valid) {
+          saveAppliedPromo({
+            code: data.code,
+            name: data.name,
+            discountCents: data.discount_cents,
+            message: data.message,
+          });
+        } else if (data?.requirementNotMet || data?.requirement_not_met) {
+          saveAppliedPromo({
+            code: appliedCode,
+            name: appliedPromo?.name || appliedCode,
+            discountCents: 0,
+            message: data.message,
+          });
+        } else if (totalCount > 0) {
+          saveAppliedPromo(null);
+        }
+      })
+      .catch(() => {});
+  }, [subtotal, cart, appliedCode, appliedPromo?.name]);
+
+  async function handleApplyPromo(event: FormEvent) {
+    event.preventDefault();
+    if (!promoInput.trim()) return;
+
+    setPromoLoading(true);
+    setPromoError("");
+    setPromoSuccess("");
+
+    try {
+      const subtotalCents = Math.round(subtotal * 100);
+      const totalCount = getCartCount(cart);
+      const response = await fetch("/api/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: promoInput.trim(),
+          subtotalCents,
+          itemCount: totalCount,
+        }),
+      });
+
+      const data = await response.json();
+      if (data?.valid) {
+        const promo = {
+          code: data.code,
+          name: data.name,
+          discountCents: data.discount_cents,
+          message: data.message,
+        };
+        saveAppliedPromo(promo);
+        setPromoSuccess(data.message || "Promo applied successfully!");
+        setPromoInput("");
+      } else {
+        setPromoError(data?.message || "Invalid promo code.");
+      }
+    } catch {
+      setPromoError("Unable to validate promo code. Please try again.");
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
+  function handleRemovePromo() {
+    saveAppliedPromo(null);
+    setPromoSuccess("");
+    setPromoError("");
+  }
 
   function handleQuantityChange(productId: number, amount: number) {
     changeCartQuantity(productId, amount);
@@ -29,6 +139,7 @@ export default function CartPage() {
 
   function handleClearCart() {
     clearCart();
+    handleRemovePromo();
   }
 
   return (
@@ -96,10 +207,59 @@ export default function CartPage() {
 
           <aside className="summary-panel">
             <div className="summary-title">Order summary</div>
+
+            <div className="checkout-promo-box cart-promo-box">
+              {appliedPromo ? (
+                <div className="promo-applied-tag">
+                  <div className="promo-info">
+                    <span className="promo-sparkle">✦</span>
+                    <div>
+                      <strong>{appliedPromo.code}</strong>
+                      <small>{appliedPromo.name}</small>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="promo-remove-btn"
+                    onClick={handleRemovePromo}
+                    aria-label="Remove promo code"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <form className="promo-input-form" onSubmit={handleApplyPromo}>
+                  <input
+                    type="text"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value)}
+                    placeholder="Promo or coupon code"
+                    className="promo-input"
+                    maxLength={30}
+                  />
+                  <button
+                    type="submit"
+                    className="button button-ghost promo-apply-btn"
+                    disabled={promoLoading || !promoInput.trim()}
+                  >
+                    {promoLoading ? "Applying…" : "Apply"}
+                  </button>
+                </form>
+              )}
+              {promoError && <p className="promo-feedback error">{promoError}</p>}
+              {promoSuccess && !promoError && <p className="promo-feedback success">{promoSuccess}</p>}
+            </div>
+
             <div className="summary-row">
               <span>Subtotal</span>
               <strong>${subtotal.toFixed(2)}</strong>
             </div>
+            {discountDollars > 0 && (
+              <div className="summary-row discount-row">
+                <span>Discount ({appliedPromo?.code})</span>
+                <strong className="discount-amount">−${discountDollars.toFixed(2)}</strong>
+              </div>
+            )}
             <div className="summary-row">
               <span>Shipping</span>
               <strong>${shipping.toFixed(2)}</strong>

@@ -37,6 +37,7 @@ Floralyn Skin is a Next.js storefront with Supabase authentication and a Supabas
 
 ## Current scope
 
-The admin dashboard reads and writes inventory, warehouse, order-status, shipment tracking, and promotion records through authenticated Supabase endpoints. Shipment status and location updates are entered manually in **Admin → Orders & fulfillment** and appear in the customer's account order history. Promotion rules are stored but are not yet applied to checkout pricing. Catalog browsing still uses the storefront's bundled product list; checkout pricing and availability are independently enforced against database products and inventory.
+The admin dashboard reads and writes inventory, warehouse, order-status, shipment tracking, and promotion records through authenticated Supabase endpoints. Shipment status and location updates are entered manually in **Admin → Orders & fulfillment** and appear in the customer's account order history. Active promotion rules and coupon codes (such as `WELCOME10` or `GLOW15`) are validated and applied to cart and checkout pricing, with atomic enforcement during order placement and PayWay settlement. Storefront catalog browsing dynamically loads active products from the Supabase database with seamless fallback to the curated collection.
 
 Run `npm run lint` and `npm run build` to validate the application.
+

@@ -47,6 +47,10 @@ export type AdminOrder = {
   status: FulfillmentStatus;
   items: string[];
   trackingUpdates: OrderTrackingUpdate[];
+  paymentMethod?: string;
+  paymentStatus?: string;
+  discountCode?: string;
+  discountCents?: number;
 };
 
 export type DiscountKind =

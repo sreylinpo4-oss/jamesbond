@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { addToCart, changeCartQuantity, getCartCount, useCart } from "@/lib/cart";
-import { categories, products, type Product } from "@/lib/products";
+import { saveAppliedPromo, useAppliedPromo } from "@/lib/discounts";
+import { brandFilters, categories, mergeCatalog, products, type Product } from "@/lib/products";
 
 const ritualHighlights = [
     {
@@ -25,41 +26,208 @@ const ritualHighlights = [
     },
 ];
 
+const productHotspots = [
+    {
+        id: 1,
+        top: "30%",
+        left: "64%",
+        tag: "COLD-SEAL DROPPER",
+        title: "Active Oxidation Shield",
+        desc: "Precision pipette preserves 100% nutrient potency and dispenses exact micro-doses.",
+    },
+    {
+        id: 2,
+        top: "65%",
+        left: "32%",
+        tag: "CLINICALLY PROVEN",
+        title: "Bio-Fermented Squalane",
+        desc: "Deep skin barrier replenishment that locks hydration for 48 hours without oiliness.",
+    },
+];
+
 export default function Home() {
+    const [catalog, setCatalog] = useState<Product[]>(products);
     const [category, setCategory] = useState("All");
+    const [selectedBrand, setSelectedBrand] = useState("All");
     const [search, setSearch] = useState("");
     const cart = useCart();
     const [cartOpen, setCartOpen] = useState(false);
     const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [notice, setNotice] = useState("");
+    const [heroIndex, setHeroIndex] = useState(0);
+    const [isHeroPaused, setIsHeroPaused] = useState(false);
+    const [heroAddedNotice, setHeroAddedNotice] = useState(false);
+    const [tilt, setTilt] = useState({ x: 0, y: 0 });
+    const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+    const [isHovered, setIsHovered] = useState(false);
+    const [activeHotspot, setActiveHotspot] = useState<number | null>(null);
+    const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number }[]>([]);
+    const visualRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const previewPanelRef = useRef<HTMLElement>(null);
     const previewTriggerRef = useRef<HTMLAnchorElement>(null);
 
+    useEffect(() => {
+        let isMounted = true;
+        fetch("/api/products")
+            .then((res) => res.json())
+            .then((data) => {
+                if (isMounted && Array.isArray(data?.products) && data.products.length > 0) {
+                    setCatalog(mergeCatalog(data.products));
+                }
+            })
+            .catch(() => {});
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     const filteredProducts = useMemo(() => {
-        return products.filter((product) => {
+        return catalog.filter((product) => {
             const matchesCategory =
                 category === "All" || product.category === category;
+
+            const matchesBrand =
+                selectedBrand === "All" ||
+                (selectedBrand === "🇰🇭 Cambodian Heritage" && product.origin === "Cambodian Botanical") ||
+                (selectedBrand === "Beauty of Joseon" && product.brand === "Beauty of Joseon") ||
+                (selectedBrand === "Anua" && product.brand === "Anua") ||
+                (selectedBrand === "Mary & May" && product.brand === "Mary & May") ||
+                (selectedBrand === "K-Beauty Hits" && (product.origin === "Korean Skincare" || ["Skin1004", "Round Lab", "COSRX"].includes(product.brand))) ||
+                (selectedBrand === "Floralyn Signature" && product.origin === "Floralyn Signature");
+
+            const q = search.toLowerCase().trim();
             const matchesSearch =
-                product.name.toLowerCase().includes(search.toLowerCase()) ||
-                product.description.toLowerCase().includes(search.toLowerCase());
+                !q ||
+                product.name.toLowerCase().includes(q) ||
+                product.description.toLowerCase().includes(q) ||
+                (product.brand && product.brand.toLowerCase().includes(q)) ||
+                (product.role && product.role.toLowerCase().includes(q)) ||
+                (product.tag && product.tag.toLowerCase().includes(q)) ||
+                (product.benefits && product.benefits.some((b) => b.toLowerCase().includes(q)));
 
-            return matchesCategory && matchesSearch;
+            return matchesCategory && matchesBrand && matchesSearch;
         });
-    }, [category, search]);
+    }, [catalog, category, selectedBrand, search]);
 
-    const cartItems = products.filter((product) => (cart[product.id] || 0) > 0);
+    const cartItems = catalog.filter((product) => (cart[product.id] || 0) > 0);
     const cartCount = getCartCount(cart);
     const subtotal = cartItems.reduce(
         (total, product) => total + product.price * (cart[product.id] || 0),
         0
     );
 
+    const appliedPromo = useAppliedPromo();
+    const discountDollars = (appliedPromo?.discountCents ?? 0) / 100;
+
+    const appliedCode = appliedPromo?.code;
+    useEffect(() => {
+        if (!appliedCode) return;
+        const subtotalCents = Math.round(subtotal * 100);
+        const totalCount = getCartCount(cart);
+
+        fetch("/api/discounts/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                code: appliedCode,
+                subtotalCents,
+                itemCount: totalCount,
+            }),
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                if (data?.valid) {
+                    saveAppliedPromo({
+                        code: data.code,
+                        name: data.name,
+                        discountCents: data.discount_cents,
+                        message: data.message,
+                    });
+                } else if (data?.requirementNotMet || data?.requirement_not_met) {
+                    saveAppliedPromo({
+                        code: appliedCode,
+                        name: appliedPromo?.name || appliedCode,
+                        discountCents: 0,
+                        message: data.message,
+                    });
+                } else if (totalCount > 0) {
+                    saveAppliedPromo(null);
+                }
+            })
+            .catch(() => {});
+    }, [subtotal, cart, appliedCode, appliedPromo?.name]);
+
+    const heroProducts = useMemo(() => {
+        return catalog.length > 0 ? catalog.slice(0, 4) : products.slice(0, 4);
+    }, [catalog]);
+
+    const currentHeroProduct = heroProducts[heroIndex] || heroProducts[0];
+
+    useEffect(() => {
+        if (isHeroPaused || heroProducts.length <= 1) return;
+        const interval = setInterval(() => {
+            setHeroIndex((prev) => (prev + 1) % heroProducts.length);
+        }, 5500);
+        return () => clearInterval(interval);
+    }, [isHeroPaused, heroProducts.length]);
+
     function addToCartItem(product: Product) {
         addToCart(product.id);
         setNotice(`${product.name} added to your bag 🌿`);
         window.setTimeout(() => setNotice(""), 2500);
+    }
+
+    function handleVisualMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+        if (!visualRef.current) return;
+        const rect = visualRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const xPct = (x / rect.width) * 2 - 1;
+        const yPct = (y / rect.height) * 2 - 1;
+        setTilt({
+            x: -yPct * 6.5,
+            y: xPct * 8,
+        });
+        setMousePos({
+            x: Math.round((x / rect.width) * 100),
+            y: Math.round((y / rect.height) * 100),
+        });
+    }
+
+    function handleVisualMouseEnter() {
+        setIsHovered(true);
+        setIsHeroPaused(true);
+    }
+
+    function handleVisualMouseLeave() {
+        setIsHovered(false);
+        setIsHeroPaused(false);
+        setTilt({ x: 0, y: 0 });
+        setActiveHotspot(null);
+    }
+
+    function handleHeroQuickAdd(event: React.MouseEvent<HTMLButtonElement>, product: Product) {
+        event.stopPropagation();
+        addToCartItem(product);
+        setHeroAddedNotice(true);
+        const newSparkles = Array.from({ length: 5 }).map((_, i) => ({
+            id: Date.now() + i,
+            x: Math.round((Math.random() - 0.5) * 60),
+            y: Math.round(-Math.random() * 45 - 20),
+        }));
+        setSparkles(newSparkles);
+        window.setTimeout(() => setSparkles([]), 850);
+        window.setTimeout(() => setHeroAddedNotice(false), 2200);
+    }
+
+    function prevHeroProduct() {
+        setHeroIndex((prev) => (prev === 0 ? heroProducts.length - 1 : prev - 1));
+    }
+
+    function nextHeroProduct() {
+        setHeroIndex((prev) => (prev + 1) % heroProducts.length);
     }
 
     function changeQuantity(id: number, amount: number) {
@@ -170,58 +338,352 @@ export default function Home() {
             </header>
 
             <section className="hero" id="home">
-                <div className="hero-copy">
-                    <div className="eyebrow">
-                        <span className="eyebrow-line" />
-                        YOUR DAILY MOMENT OF CALM
+                {/* Floating cinematic botanical SVG petals & bokeh */}
+                <div className="hero-particles" aria-hidden="true">
+                    <div className="petal-svg bokeh-1">
+                        <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                            <circle cx="30" cy="30" r="28" fill="url(#bokehGrad1)" />
+                            <defs>
+                                <radialGradient id="bokehGrad1" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stopColor="#dce4d5" stopOpacity="0.55" />
+                                    <stop offset="100%" stopColor="#dce4d5" stopOpacity="0" />
+                                </radialGradient>
+                            </defs>
+                        </svg>
                     </div>
-                    <h1>
+                    <div className="petal-svg bokeh-2">
+                        <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
+                            <circle cx="35" cy="35" r="32" fill="url(#bokehGrad2)" />
+                            <defs>
+                                <radialGradient id="bokehGrad2" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stopColor="#edd8ce" stopOpacity="0.45" />
+                                    <stop offset="100%" stopColor="#edd8ce" stopOpacity="0" />
+                                </radialGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div className="petal-svg leaf-1">
+                        <svg width="34" height="46" viewBox="0 0 34 46" fill="none">
+                            <path d="M17 2C7 16 7 30 17 44C27 30 27 16 17 2Z" fill="url(#leafGrad1)" />
+                            <path d="M17 7L17 39" stroke="rgba(255,255,255,0.45)" strokeWidth="1" strokeLinecap="round" />
+                            <defs>
+                                <linearGradient id="leafGrad1" x1="17" y1="2" x2="17" y2="44" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#87977d" stopOpacity="0.5" />
+                                    <stop offset="1" stopColor="#4c6351" stopOpacity="0.35" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div className="petal-svg petal-2">
+                        <svg width="30" height="34" viewBox="0 0 30 34" fill="none">
+                            <path d="M15 3C9 3 4 8 4 16C4 24 15 32 15 32C15 32 26 24 26 16C26 8 21 3 15 3Z" fill="url(#petalGrad1)" />
+                            <defs>
+                                <linearGradient id="petalGrad1" x1="15" y1="3" x2="15" y2="32" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#d8b4a6" stopOpacity="0.48" />
+                                    <stop offset="1" stopColor="#c5a193" stopOpacity="0.3" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div className="petal-svg leaf-3">
+                        <svg width="28" height="38" viewBox="0 0 28 38" fill="none">
+                            <path d="M14 2C6 13 6 25 14 36C22 25 22 13 14 2Z" fill="url(#leafGrad2)" />
+                            <defs>
+                                <linearGradient id="leafGrad2" x1="14" y1="2" x2="14" y2="36" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#a3b499" stopOpacity="0.5" />
+                                    <stop offset="1" stopColor="#7a8d71" stopOpacity="0.32" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <div className="petal-svg petal-4">
+                        <svg width="24" height="28" viewBox="0 0 24 28" fill="none">
+                            <path d="M12 2C7 2 3 6 3 13C3 20 12 26 12 26C12 26 21 20 21 13C21 6 17 2 12 2Z" fill="url(#goldGrad)" />
+                            <defs>
+                                <linearGradient id="goldGrad" x1="12" y1="2" x2="12" y2="26" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#dfcb9e" stopOpacity="0.5" />
+                                    <stop offset="1" stopColor="#baa77b" stopOpacity="0.25" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+
+                <div className="hero-copy">
+                    <div className="hero-editorial-meta hero-fade-up">
+                        <span className="editorial-counter">
+                            0{heroIndex + 1} <small>/ 0{heroProducts.length}</small>
+                        </span>
+                        <span className="meta-divider">|</span>
+                        <span className="batch-status-badge">
+                            <span className="live-status-dot" />
+                            COLD-PRESSED SMALL BATCH
+                        </span>
+                    </div>
+
+                    <div className="eyebrow hero-fade-up">
+                        <span className="eyebrow-line" />
+                        <span>YOUR DAILY MOMENT OF CALM</span>
+                    </div>
+                    <h1 className="hero-fade-up hero-delay-1">
                         Let your skin
                         <br />
-                        <em>bloom naturally.</em>
+                        <span className="bloom-gradient-text"><em>bloom naturally.</em></span>
                     </h1>
-                    <p className="hero-description">
+                    <p className="hero-description hero-fade-up hero-delay-2">
                         Thoughtful skincare inspired by nature. Gentle rituals, botanical
                         ingredients, and a little everyday luxury for your skin.
                     </p>
-                    <div className="hero-buttons">
-                        <a className="button button-dark" href="#shop">
+
+                    {/* Featured product spotlight tabs */}
+                    <div className="hero-product-chips hero-fade-up hero-delay-2" role="tablist" aria-label="Featured skincare essentials">
+                        <span className="chips-label">Spotlight:</span>
+                        {heroProducts.map((p, idx) => (
+                            <button
+                                key={p.id}
+                                role="tab"
+                                type="button"
+                                aria-selected={idx === heroIndex}
+                                className={idx === heroIndex ? "hero-chip active" : "hero-chip"}
+                                onClick={() => setHeroIndex(idx)}
+                            >
+                                <span className="chip-dot" />
+                                {p.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="hero-buttons hero-fade-up hero-delay-3">
+                        <a className="button button-dark hero-cta-button" href="#shop">
                             Discover your ritual <span>↗</span>
                         </a>
                         <a className="text-link" href="#story">
                             Our philosophy ↗
                         </a>
                     </div>
-                    <div className="hero-note">
+
+                    <div className="hero-social-proof hero-fade-up hero-delay-4">
+                        <div className="proof-avatars">
+                            <span className="proof-avatar">🌿</span>
+                            <span className="proof-avatar">🌸</span>
+                            <span className="proof-avatar">✨</span>
+                        </div>
+                        <div className="proof-content">
+                            <div className="proof-stars">★★★★★ <strong>4.9/5 Rating</strong></div>
+                            <p>&ldquo;My routine transformed within 3 days. Pure botanical magic.&rdquo;</p>
+                        </div>
+                    </div>
+
+                    <div className="hero-note hero-fade-up hero-delay-4">
                         <span className="note-icon">✳</span>
                         <span>
                             <strong>Less, but more intentional.</strong>
                             <small>Skincare that feels like a deep breath.</small>
                         </span>
                     </div>
-                    <span className="hero-decoration">grow gently · glow softly</span>
+                    <span className="hero-decoration hero-fade-up hero-delay-4">grow gently · glow softly</span>
                 </div>
 
-                <div className="hero-visual">
-                    <Image
-                        className="hero-image"
-                        src="https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=1200&q=90"
-                        alt="Elegant skincare products in a natural setting"
-                        width={1200}
-                        height={1200}
-                        priority
-                    />
-                    <div className="hero-image-label">
-                        <span className="label-flower">✿</span>
-                        <span>
-                            ROOTED IN NATURE
-                            <small>Made for your everyday ritual</small>
-                        </span>
+                <div
+                    className="hero-visual"
+                    ref={visualRef}
+                    onMouseMove={handleVisualMouseMove}
+                    onMouseEnter={handleVisualMouseEnter}
+                    onMouseLeave={handleVisualMouseLeave}
+                    onTouchStart={() => setIsHeroPaused(true)}
+                    onTouchEnd={() => setIsHeroPaused(false)}
+                >
+                    {/* 3D Tilting Perspective Container */}
+                    <div
+                        className="hero-3d-card"
+                        style={{
+                            transform: isHovered
+                                ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`
+                                : "perspective(1000px) rotateX(0deg) rotateY(0deg)",
+                            transition: isHovered
+                                ? "transform 0.12s cubic-bezier(0.2, 0, 0, 1)"
+                                : "transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)",
+                        }}
+                    >
+                        {/* Glowing ambient radial aura (deep Z-depth) */}
+                        <div className="hero-ambient-glow" aria-hidden="true" />
+
+                        {/* Active product image with smooth crossfade and keyframe entrance */}
+                        <div className="hero-image-frame" key={currentHeroProduct?.id || heroIndex}>
+                            <Image
+                                className="hero-image-animated"
+                                src={currentHeroProduct?.image || "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?auto=format&fit=crop&w=1200&q=90"}
+                                alt={currentHeroProduct?.name || "Elegant skincare products"}
+                                width={1200}
+                                height={1200}
+                                priority
+                            />
+
+                            {/* Dynamic Specular Lens Sheen following cursor */}
+                            <div
+                                className="hero-specular-sheen"
+                                style={{
+                                    background: `radial-gradient(circle 280px at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 80%)`,
+                                    opacity: isHovered ? 1 : 0.25,
+                                }}
+                            />
+
+                            <div className="hero-image-overlay" />
+
+                            {/* Interactive Feature Hotspot Pins */}
+                            {productHotspots.map((spot) => (
+                                <div
+                                    key={spot.id}
+                                    className={`hero-hotspot ${activeHotspot === spot.id ? "active" : ""}`}
+                                    style={{ top: spot.top, left: spot.left }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveHotspot(activeHotspot === spot.id ? null : spot.id);
+                                    }}
+                                    onMouseEnter={() => setActiveHotspot(spot.id)}
+                                    onMouseLeave={() => setActiveHotspot(null)}
+                                >
+                                    <button
+                                        type="button"
+                                        className="hotspot-trigger"
+                                        aria-label={`Explore ${spot.title}`}
+                                    >
+                                        <span className="hotspot-pulse" />
+                                        <span className="hotspot-dot" />
+                                    </button>
+
+                                    <div className="hotspot-tooltip">
+                                        <span className="hotspot-tag">{spot.tag}</span>
+                                        <strong>{spot.title}</strong>
+                                        <p>{spot.desc}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Carousel Navigation Arrows */}
+                        <div className="hero-carousel-nav" aria-label="Hero product navigation">
+                            <button
+                                type="button"
+                                className="hero-arrow-btn prev"
+                                onClick={prevHeroProduct}
+                                aria-label="Previous product"
+                            >
+                                ‹
+                            </button>
+                            <button
+                                type="button"
+                                className="hero-arrow-btn next"
+                                onClick={nextHeroProduct}
+                                aria-label="Next product"
+                            >
+                                ›
+                            </button>
+                        </div>
+
+                        {/* Floating Rotating Ritual Seal (3D z-depth) */}
+                        <div className="floating-seal-wrapper">
+                            <div className="floating-seal">
+                                <span>YOUR SKIN</span>
+                                <span className="seal-flower">✳</span>
+                                <span>YOUR RITUAL</span>
+                            </div>
+                        </div>
+
+                        {/* Interactive Animated Product Spotlight Card (Forefront 3D pop) */}
+                        {currentHeroProduct && (
+                            <div className="hero-product-badge" key={`badge-${currentHeroProduct.id}`}>
+                                <div className="badge-header">
+                                    <span className="badge-tag">{currentHeroProduct.tag}</span>
+                                    <span className="badge-rating">
+                                        ★ 4.9 <small>(120+)</small>
+                                    </span>
+                                </div>
+
+                                <div className="badge-body">
+                                    <Link
+                                        href={`/product/${currentHeroProduct.id}`}
+                                        onClick={(e) => openProductPreview(e, currentHeroProduct)}
+                                        className="badge-title"
+                                        aria-haspopup="dialog"
+                                    >
+                                        {currentHeroProduct.name}
+                                    </Link>
+                                    <span className="badge-category">{currentHeroProduct.category}</span>
+                                </div>
+
+                                <div className="badge-benefits">
+                                    {currentHeroProduct.benefits.slice(0, 2).map((benefit, i) => (
+                                        <span key={i} className="benefit-pill">
+                                            ✓ {benefit}
+                                        </span>
+                                    ))}
+                                </div>
+
+                                <div className="badge-footer">
+                                    <span className="badge-price">${currentHeroProduct.price.toFixed(2)}</span>
+                                    <div className="badge-btn-wrap">
+                                        <button
+                                            type="button"
+                                            className={`badge-add-btn ${heroAddedNotice ? "added" : ""}`}
+                                            onClick={(e) => handleHeroQuickAdd(e, currentHeroProduct)}
+                                            aria-label={`Add ${currentHeroProduct.name} to bag`}
+                                        >
+                                            {heroAddedNotice ? "Added 🌿" : "Add to bag +"}
+                                        </button>
+                                        {/* Sparkle burst particles */}
+                                        {sparkles.map((sp) => (
+                                            <span
+                                                key={sp.id}
+                                                className="sparkle-particle"
+                                                style={{
+                                                    "--tx": `${sp.x}px`,
+                                                    "--ty": `${sp.y}px`,
+                                                } as React.CSSProperties}
+                                            >
+                                                ✦
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    <div className="floating-seal">
-                        <span>YOUR SKIN</span>
-                        <span className="seal-flower">✳</span>
-                        <span>YOUR RITUAL</span>
+
+                    {/* Carousel Thumbnail Gallery Dock & Progress Indicators */}
+                    <div className="hero-progress-bars" role="tablist" aria-label="Select hero product">
+                        {heroProducts.map((p, idx) => (
+                            <button
+                                type="button"
+                                key={p.id}
+                                className={`hero-progress-indicator ${idx === heroIndex ? "active" : ""}`}
+                                onClick={() => setHeroIndex(idx)}
+                                aria-label={`View ${p.name}`}
+                                aria-selected={idx === heroIndex}
+                                role="tab"
+                            >
+                                <div className="indicator-thumb-wrap">
+                                    <Image
+                                        src={p.image}
+                                        alt={p.name}
+                                        width={44}
+                                        height={44}
+                                        className="indicator-thumb-img"
+                                    />
+                                    <span className="indicator-thumb-price">${p.price}</span>
+                                </div>
+                                <span className="indicator-track">
+                                    <span
+                                        className="indicator-fill"
+                                        style={{
+                                            animationDuration: "5500ms",
+                                            animationPlayState: isHeroPaused ? "paused" : "running",
+                                        }}
+                                    />
+                                </span>
+                                <span className="indicator-label">{p.name}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
             </section>
@@ -263,28 +725,60 @@ export default function Home() {
                     </span>
                 </div>
 
-                <div className="shop-controls">
-                    <div className="category-tabs" role="group" aria-label="Filter by category">
-                        {categories.map((item) => (
+                <div className="shop-controls" style={{ flexDirection: "column", alignItems: "stretch", gap: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                        {/* Functional Category Filter Tabs */}
+                        <div className="category-tabs" role="group" aria-label="Filter by function">
+                            {categories.map((item) => (
+                                <button
+                                    key={item}
+                                    className={category === item ? "category-tab active" : "category-tab"}
+                                    onClick={() => setCategory(item)}
+                                >
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Search Input */}
+                        <label className="search-box" style={{ maxWidth: "340px", flex: 1 }}>
+                            <span>⌕</span>
+                            <input
+                                ref={searchInputRef}
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search by name, brand, function (e.g. SPF, cica, rice)..."
+                                aria-label="Search products"
+                            />
+                            {search && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearch("")}
+                                    style={{ background: "none", border: 0, cursor: "pointer", color: "#666", fontSize: "14px" }}
+                                    aria-label="Clear search"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </label>
+                    </div>
+
+                    {/* Brand & Line Filter Pills */}
+                    <div className="brand-filter-pills" role="group" aria-label="Filter by brand or collection">
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--color-sage, #3e5a4a)", display: "flex", alignItems: "center", marginRight: "4px" }}>
+                            Collection:
+                        </span>
+                        {brandFilters.map((brand) => (
                             <button
-                                key={item}
-                                className={category === item ? "category-tab active" : "category-tab"}
-                                onClick={() => setCategory(item)}
+                                key={brand}
+                                type="button"
+                                className={selectedBrand === brand ? "brand-pill active" : "brand-pill"}
+                                onClick={() => setSelectedBrand(brand)}
                             >
-                                {item}
+                                {brand}
                             </button>
                         ))}
                     </div>
-                    <label className="search-box">
-                        <span>⌕</span>
-                        <input
-                            ref={searchInputRef}
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Find your favorite..."
-                            aria-label="Search products"
-                        />
-                    </label>
                 </div>
 
                 {filteredProducts.length > 0 ? (
@@ -302,7 +796,16 @@ export default function Home() {
                                 </Link>
                                 <div className="product-info">
                                     <div>
-                                        <span className="product-category">{product.category}</span>
+                                        <div className="product-brand-row">
+                                            {product.brand && <span className="product-brand-tag">{product.brand}</span>}
+                                            <span className="product-category">{product.category}</span>
+                                        </div>
+                                        {product.role && (
+                                            <div className="product-role-line">
+                                                <span className="role-sparkle">✦</span>
+                                                <span className="product-role">{product.role}</span>
+                                            </div>
+                                        )}
                                         <h3>
                                             <Link
                                                 href={`/product/${product.id}`}
@@ -504,7 +1007,35 @@ export default function Home() {
                                     ))}
                                 </div>
                                 <div className="cart-summary">
-                                    <div><span>Subtotal</span><strong>${subtotal.toFixed(2)}</strong></div>
+                                    {appliedPromo && (
+                                        <div className="promo-applied-tag" style={{ marginBottom: "12px" }}>
+                                            <div className="promo-info">
+                                                <span className="promo-sparkle">✦</span>
+                                                <div>
+                                                    <strong>{appliedPromo.code}</strong>
+                                                    <small>{appliedPromo.name}</small>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="promo-remove-btn"
+                                                onClick={() => saveAppliedPromo(null)}
+                                                aria-label="Remove promo code"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div className="summary-row" style={{ display: "flex", justifyContent: "space-between" }}>
+                                        <span>Subtotal</span>
+                                        <strong>${subtotal.toFixed(2)}</strong>
+                                    </div>
+                                    {discountDollars > 0 && (
+                                        <div className="summary-row discount-row" style={{ display: "flex", justifyContent: "space-between", color: "#2d6a4f", fontWeight: 600 }}>
+                                            <span>Discount ({appliedPromo?.code})</span>
+                                            <span>−${discountDollars.toFixed(2)}</span>
+                                        </div>
+                                    )}
                                     <p>Shipping and any applicable taxes are calculated at checkout.</p>
                                     <Link
                                         href="/checkout"
@@ -557,8 +1088,16 @@ export default function Home() {
                             <span className="product-tag">{previewProduct.tag}</span>
                         </div>
                         <div className="product-preview-content">
-                            <span className="product-category">{previewProduct.category}</span>
+                            <div className="product-brand-row" style={{ marginBottom: "6px" }}>
+                                {previewProduct.brand && <span className="product-brand-tag">{previewProduct.brand}</span>}
+                                <span className="product-category">{previewProduct.category}</span>
+                            </div>
                             <h2 id="product-preview-title">{previewProduct.name}</h2>
+                            {previewProduct.role && (
+                                <p className="product-role-tag">
+                                    ✦ Function & Role: {previewProduct.role}
+                                </p>
+                            )}
                             <strong className="product-preview-price">
                                 ${previewProduct.price.toFixed(2)}
                             </strong>

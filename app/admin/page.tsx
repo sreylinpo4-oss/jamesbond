@@ -458,13 +458,18 @@ export default function AdminPage() {
     const name = discountName.trim();
     const value = discountValue.trim();
     if (!name || !value) return;
+    if (discountKind === "Coupon" && !couponCode.trim()) {
+      setNotice("Please enter a coupon code for coupon promotions.");
+      return;
+    }
+    const minQty = Math.max(1, Math.floor(Number(minimumQuantity) || 1));
     const rule: DiscountRule = {
       id: `rule-${crypto.randomUUID()}`,
       name,
       kind: discountKind,
       value,
-      ...(["Tiered pricing", "Wholesale tier"].includes(discountKind)
-        ? { minimumQuantity: Math.max(1, Math.floor(Number(minimumQuantity) || 1)) }
+      ...(["Tiered pricing", "Wholesale tier", "Bundle"].includes(discountKind) || (discountKind === "Coupon" && Number(minimumQuantity) > 1)
+        ? { minimumQuantity: minQty }
         : {}),
       ...(discountKind === "Coupon" && couponCode.trim()
         ? { code: couponCode.trim().toUpperCase() }
@@ -477,6 +482,14 @@ export default function AdminPage() {
     setMinimumQuantity("24");
     setCouponCode("");
     setNotice(`${name} rule added.`);
+  }
+
+  function deleteDiscount(ruleId: string) {
+    updateStore((current) => ({
+      ...current,
+      discounts: current.discounts.filter((rule) => rule.id !== ruleId),
+    }));
+    setNotice("Promotion rule removed.");
   }
 
   function toggleDiscount(ruleId: string) {
@@ -750,7 +763,15 @@ export default function AdminPage() {
                         <td><strong>{order.customer}</strong><small className="table-subtext">{order.email}</small></td>
                         <td>{order.date}</td>
                         <td>{order.items.join(", ")}</td>
-                        <td>${order.total.toFixed(2)}</td>
+                        <td>
+                          <strong>${order.total.toFixed(2)}</strong>
+                          {order.discountCode && (
+                            <small className="table-subtext" style={{ color: "#2d6a4f", display: "block" }}>Promo: {order.discountCode}</small>
+                          )}
+                          {order.paymentStatus && (
+                            <small className="table-subtext" style={{ display: "block" }}>{order.paymentStatus}</small>
+                          )}
+                        </td>
                         <td><span className={`status-pill status-${order.status.toLowerCase()}`}>{order.status}</span></td>
                         <td>
                           <div className="fulfillment-actions">
@@ -868,9 +889,20 @@ export default function AdminPage() {
                         </span>
                       </div>
                       <strong className="discount-value">{rule.value}</strong>
-                      <button type="button" className={rule.active ? "rule-toggle active" : "rule-toggle"} onClick={() => toggleDiscount(rule.id)}>
-                        {rule.active ? "Active" : "Paused"}
-                      </button>
+                      <div className="discount-row-actions">
+                        <button type="button" className={rule.active ? "rule-toggle active" : "rule-toggle"} onClick={() => toggleDiscount(rule.id)}>
+                          {rule.active ? "Active" : "Paused"}
+                        </button>
+                        <button
+                          type="button"
+                          className="rule-delete-btn"
+                          onClick={() => deleteDiscount(rule.id)}
+                          title="Delete promotion"
+                          aria-label={`Delete ${rule.name}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -891,22 +923,22 @@ export default function AdminPage() {
                       {discountKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
                     </select>
                   </label>
-                  {(["Wholesale tier", "Tiered pricing"].includes(discountKind)) && (
+                  {discountKind === "Coupon" && (
                     <label>
-                      Minimum quantity for this tier
-                      <input type="number" min="1" value={minimumQuantity} onChange={(event) => setMinimumQuantity(event.target.value)} placeholder="24" />
+                      Coupon code
+                      <input value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="GARDEN15" required />
+                    </label>
+                  )}
+                  {(["Wholesale tier", "Tiered pricing", "Coupon", "Bundle"].includes(discountKind)) && (
+                    <label>
+                      Minimum items in bag {discountKind === "Coupon" ? "(optional)" : ""}
+                      <input type="number" min="1" value={minimumQuantity} onChange={(event) => setMinimumQuantity(event.target.value)} placeholder="1" />
                     </label>
                   )}
                   <label>
                     Discount / offer
                     <input value={discountValue} onChange={(event) => setDiscountValue(event.target.value)} placeholder="e.g. 15% off or $5 off" required />
                   </label>
-                  {discountKind === "Coupon" && (
-                    <label>
-                      Coupon code
-                      <input value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="GARDEN15" />
-                    </label>
-                  )}
                   <button type="submit" className="admin-button primary">Add pricing rule</button>
                 </form>
               </article>
@@ -914,7 +946,10 @@ export default function AdminPage() {
 
             <div className="admin-feature-note">
               <span>✳</span>
-            <div><strong>Promotions are not applied at checkout.</strong><p>Rules are saved to the database, but discount calculation and coupon validation are not yet enabled in checkout.</p></div>
+              <div>
+                <strong>Active promotions apply to customer checkout.</strong>
+                <p>Saved coupon codes and promotion rules are validated in real-time during bag review, order placement, and PayWay checkout settlement.</p>
+              </div>
             </div>
           </section>
         )}

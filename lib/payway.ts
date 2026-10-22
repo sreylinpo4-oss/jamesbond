@@ -6,6 +6,8 @@ type PayWayOrder = {
   order_number: string;
   subtotal_cents: number;
   shipping_cents: number;
+  total_cents?: number;
+  discount_cents?: number;
   currency: "USD" | "KHR";
 };
 
@@ -101,12 +103,16 @@ export function createPayWayCheckoutForm(
   const { merchantId, apiKey, siteUrl, action } = getPayWayConfig();
   const [firstName, ...lastNameParts] = customer.name.trim().split(/\s+/);
   const reqTime = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
+  const discountedSubtotal = Math.max(
+    0,
+    order.subtotal_cents - (order.discount_cents ?? 0),
+  );
   const items = Buffer.from(
     JSON.stringify([
       {
         name: order.order_number,
         quantity: 1,
-        price: Number(formatMoney(order.subtotal_cents, order.currency)),
+        price: Number(formatMoney(discountedSubtotal, order.currency)),
       },
     ]),
   ).toString("base64");
@@ -122,7 +128,7 @@ export function createPayWayCheckoutForm(
     req_time: reqTime,
     merchant_id: merchantId,
     tran_id: order.order_number,
-    amount: formatMoney(order.subtotal_cents, order.currency),
+    amount: formatMoney(discountedSubtotal, order.currency),
     items,
     shipping: formatMoney(order.shipping_cents, order.currency),
     firstname: firstName.slice(0, 100),
