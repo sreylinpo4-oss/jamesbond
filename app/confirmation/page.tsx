@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import BrandMark from "@/components/BrandMark";
 import { clearCart } from "@/lib/cart";
 
 type OrderDetails = {
@@ -85,7 +86,7 @@ function ConfirmationDetails() {
 
   return (
     <div className="confirmation-card">
-      <span className="story-flower">✳</span>
+      <BrandMark className="story-flower" size={140} />
       <div className="eyebrow">
         {isLoading ? "LOADING ORDER" : isPaid ? "PAYMENT RECEIVED" : isCod ? "ORDER PLACED" : "PAYMENT STATUS"}
       </div>
@@ -161,7 +162,7 @@ function ConfirmationDetails() {
 export default function ConfirmationPage() {
   return (
     <main className="page-shell static-page confirmation-shell">
-      <Suspense fallback={<div className="confirmation-card"><span className="story-flower">✳</span><div className="eyebrow">ORDER CONFIRMED</div><h1>Loading your order…</h1></div>}>
+      <Suspense fallback={<div className="confirmation-card"><BrandMark className="story-flower" size={140} /><div className="eyebrow">ORDER CONFIRMED</div><h1>Loading your order…</h1></div>}>
         <ConfirmationDetails />
       </Suspense>
     </main>

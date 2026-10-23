@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
+import BrandMark from "@/components/BrandMark";
+
 import {
   ORDER_STATUSES,
   TRACKING_STATUSES,
@@ -512,7 +514,7 @@ export default function AdminPage() {
     <main className="admin-shell">
       <aside className="admin-sidebar">
         <Link href="/" className="admin-brand">
-          <span className="brand-mark">✳</span>
+          <BrandMark />
           <span>FLORALYN<small>STORE ADMIN</small></span>
         </Link>
         <div className="admin-nav-label">MANAGEMENT</div>
@@ -646,7 +648,7 @@ export default function AdminPage() {
                   );
                   return (
                     <div className="warehouse-card" key={warehouse.id}>
-                      <span className="warehouse-flower">✿</span>
+                      <BrandMark className="warehouse-flower" size={20} />
                       <strong>{warehouse.name}</strong>
                       <small>{warehouse.location}</small>
                       <span>{stockCount} total units</span>
@@ -879,7 +881,7 @@ export default function AdminPage() {
                 <div className="discount-list">
                   {data.discounts.map((rule) => (
                     <div className="discount-row" key={rule.id}>
-                      <div className="discount-icon">{rule.kind === "Coupon" ? "%" : rule.kind === "Bundle" ? "✿" : rule.kind === "Flash sale" ? "✦" : "◇"}</div>
+                      <div className="discount-icon">{rule.kind === "Coupon" ? "%" : rule.kind === "Bundle" ? "B" : rule.kind === "Flash sale" ? "S" : "$"}</div>
                       <div className="discount-info">
                         <strong>{rule.name}</strong>
                         <span>
@@ -945,7 +947,7 @@ export default function AdminPage() {
             </div>
 
             <div className="admin-feature-note">
-              <span>✳</span>
+              <BrandMark size={20} />
               <div>
                 <strong>Active promotions apply to customer checkout.</strong>
                 <p>Saved coupon codes and promotion rules are validated in real-time during bag review, order placement, and PayWay checkout settlement.</p>

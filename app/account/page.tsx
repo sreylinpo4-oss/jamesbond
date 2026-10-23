@@ -44,7 +44,7 @@ export default async function AccountPage() {
     <main className="account-page">
       <header className="navbar">
         <Link href="/" className="logo">
-          ✿ Floralyn Skin
+          Floralyn Skin
         </Link>
         <nav>
           <Link href="/#home">Home</Link>
@@ -54,7 +54,7 @@ export default async function AccountPage() {
           </Link>
         </nav>
         <Link className="bag" href="/cart">
-          ♡ Bag
+          Bag
         </Link>
       </header>
 
@@ -127,7 +127,7 @@ export default async function AccountPage() {
                     textDecoration: "none",
                   }}
                 >
-                  ⚙️ Open Store Admin Portal ↗
+                  Open Store Admin Portal ↗
                 </Link>
               </div>
             )}

@@ -14,7 +14,7 @@ function ForgotPasswordForm() {
     <div className="auth-card">
       <div className="auth-header">
         <Link href="/" className="logo">
-          ✿ Floralyn Skin
+          Floralyn Skin
         </Link>
         <h1>Reset password</h1>
         <p>Enter your email and we&apos;ll send you instructions to reset your password.</p>

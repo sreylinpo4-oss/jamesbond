@@ -22,13 +22,49 @@ export type ChatMessage = {
     timestamp: string;
 };
 
+function ChatBubbleIcon({ size = 16 }: { size?: number }) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+        >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+    );
+}
+
+function BotanicalAvatarIcon({ size = 14 }: { size?: number }) {
+    return (
+        <svg
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+        >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2C10.5 4.5 10.5 7.5 12 9.5C13.5 7.5 13.5 4.5 12 2Z" />
+            <path d="M12 22C10.5 19.5 10.5 16.5 12 14.5C13.5 16.5 13.5 19.5 12 22Z" />
+            <path d="M2 12C4.5 10.5 7.5 10.5 9.5 12C7.5 13.2 5 13.2 2 12Z" />
+            <path d="M22 12C19.5 10.5 16.5 10.5 14.5 12C16.5 13.2 19 13.2 22 12Z" />
+        </svg>
+    );
+}
+
 const INITIAL_SUGGESTIONS = [
-    { label: "🇰🇭 Cambodian Local Skincare", query: "What Cambodian local botanical products do you have?" },
-    { label: "🇰🇷 Korean Skincare (K-Beauty)", query: "Tell me about your Korean skincare brands like Beauty of Joseon and Anua" },
-    { label: "☀️ Best Sunscreens SPF50+", query: "What are your best sunscreens for daily protection?" },
-    { label: "🎁 10% Discount Code", query: "Do you have a discount code for my order?" },
-    { label: "🌿 Calming & Redness Routine", query: "What routine is best for sensitive, redness-prone skin?" },
-    { label: "✨ Dark Spots & Glow", query: "What products help with dark spots, hyperpigmentation, and glow?" },
+    { label: "Cambodian Local Skincare", query: "What Cambodian local botanical products do you have?" },
+    { label: "Korean Skincare (K-Beauty)", query: "Tell me about your Korean skincare brands like Beauty of Joseon and Anua" },
+    { label: "Best Sunscreens SPF50+", query: "What are your best sunscreens for daily protection?" },
+    { label: "10% Discount Code", query: "Do you have a discount code for my order?" },
+    { label: "Calming & Redness Routine", query: "What routine is best for sensitive, redness-prone skin?" },
+    { label: "Dark Spots & Glow", query: "What products help with dark spots, hyperpigmentation, and glow?" },
 ];
 
 function getBotReply(input: string, catalog: Product[]): Omit<ChatMessage, "id" | "sender" | "timestamp"> {
@@ -317,7 +353,7 @@ function getBotReply(input: string, catalog: Product[]): Omit<ChatMessage, "id" 
         q.includes("policy")
     ) {
         return {
-            text: "📦 **Shipping & Delivery:**\n• Free standard delivery on orders over $50\n• Dispatches within 24–48 hours (3–5 business days delivery)\n• 30-Day Botanical Happiness Guarantee with hassle-free returns\n\nYou can view and track your orders anytime in your customer account.",
+            text: "**Shipping & Delivery:**\n• Free standard delivery on orders over $50\n• Dispatches within 24–48 hours (3–5 business days delivery)\n• 30-Day Botanical Happiness Guarantee with hassle-free returns\n\nYou can view and track your orders anytime in your customer account.",
             action: {
                 type: "link",
                 url: "/account",
@@ -329,7 +365,7 @@ function getBotReply(input: string, catalog: Product[]): Omit<ChatMessage, "id" 
     // 15. Greetings
     if (q.includes("hi") || q.includes("hello") || q.includes("hey") || q.includes("good morning") || q.includes("good afternoon")) {
         return {
-            text: "Hello radiant soul 🌿 Welcome to Floralyn Skin. I'm Flora, your botanical skincare guide. How can I pamper your skin routine today?",
+            text: "Hello radiant soul. Welcome to Floralyn Skin. I'm Flora, your botanical skincare guide. How can I pamper your skin routine today?",
         };
     }
 
@@ -344,7 +380,7 @@ function getBotReply(input: string, catalog: Product[]): Omit<ChatMessage, "id" 
     // 17. Thank you
     if (q.includes("thank") || q.includes("thanks") || q.includes("awesome") || q.includes("helpful")) {
         return {
-            text: "You are so welcome! Wishing you a peaceful day and beautifully rested skin 🌸 Let me know whenever you need another botanical tip.",
+            text: "You are so welcome! Wishing you a peaceful day and beautifully rested skin. Let me know whenever you need another botanical tip.",
         };
     }
 
@@ -372,7 +408,7 @@ export default function Chatbot() {
         const welcomeMessage: ChatMessage = {
             id: "welcome-1",
             sender: "bot",
-            text: "Hello, lovely! 🌿 I'm Flora, your botanical skincare advisor. How can I help your skin bloom naturally today?",
+            text: "Hello, lovely! I'm Flora, your botanical skincare advisor. How can I help your skin bloom naturally today?",
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages([welcomeMessage]);
@@ -456,7 +492,7 @@ export default function Chatbot() {
             {
                 id: `welcome-${Date.now()}`,
                 sender: "bot",
-                text: "Chat refreshed 🌿 What would you like to explore next?",
+                text: "Chat refreshed. What would you like to explore next?",
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             },
         ]);
@@ -487,7 +523,7 @@ export default function Chatbot() {
                     tabIndex={0}
                     aria-label="Click to open skincare chatbot"
                 >
-                    <span className="callout-sparkle">💬</span>
+                    <span className="callout-sparkle"><ChatBubbleIcon size={15} /></span>
                     <div>
                         <strong>Skincare Chatbot</strong>
                         <p>Hi! Need personalized routine advice or a 10% coupon? Click to chat with Flora!</p>
@@ -521,7 +557,7 @@ export default function Chatbot() {
                     }}
                 >
                     <div className="launcher-avatar-wrap">
-                        <span className="launcher-chat-icon">💬</span>
+                        <span className="launcher-chat-icon"><ChatBubbleIcon size={16} /></span>
                         <span className="launcher-pulse-ring" />
                     </div>
                     <div className="launcher-text">
@@ -540,7 +576,7 @@ export default function Chatbot() {
                     <header className="chat-header">
                         <div className="chat-header-info">
                             <div className="chat-avatar">
-                                <span>💬</span>
+                                <span><ChatBubbleIcon size={16} /></span>
                                 <span className="chat-status-dot" />
                             </div>
                             <div>
@@ -579,7 +615,7 @@ export default function Chatbot() {
                             >
                                 {msg.sender === "bot" && (
                                     <div className="msg-bot-avatar" aria-hidden="true">
-                                        ✿
+                                        <BotanicalAvatarIcon size={13} />
                                     </div>
                                 )}
 
@@ -598,7 +634,7 @@ export default function Chatbot() {
                                                     onClick={() => handleCopyDiscount(msg.action?.code || "BLOOM10")}
                                                 >
                                                     <span className="code-tag">{msg.action.code}</span>
-                                                    <span>{copiedCode ? "Applied to Bag! ✓" : "Apply Code (10% Off)"}</span>
+                                                    <span>{copiedCode ? "Applied to Bag!" : "Apply Code (10% Off)"}</span>
                                                 </button>
                                             )}
                                             {msg.action.type === "link" && msg.action.url && (
@@ -629,8 +665,8 @@ export default function Chatbot() {
                                                             {product.name}
                                                         </Link>
                                                         <div className="chat-product-meta">
-                                                            <span className="chat-product-role" title={product.role || product.tag}>✦ {product.role || product.tag || "Botanical Ritual"}</span>
-                                                            <span className="chat-rating">★ 4.9</span>
+                                                            <span className="chat-product-role" title={product.role || product.tag}>{product.role || product.tag || "Botanical Ritual"}</span>
+                                                            <span className="chat-rating">4.9 / 5.0</span>
                                                         </div>
                                                     </div>
                                                     <button
@@ -639,7 +675,7 @@ export default function Chatbot() {
                                                         onClick={() => handleAddToCart(product)}
                                                         aria-label={`Add ${product.name} to cart`}
                                                     >
-                                                        {addedNotice === product.id ? "Added ✓" : "+ Add"}
+                                                        {addedNotice === product.id ? "Added" : "+ Add"}
                                                     </button>
                                                 </article>
                                             ))}
@@ -655,7 +691,7 @@ export default function Chatbot() {
                         {isTyping && (
                             <div className="chat-message-row bot-row">
                                 <div className="msg-bot-avatar" aria-hidden="true">
-                                    ✿
+                                    <BotanicalAvatarIcon size={13} />
                                 </div>
                                 <div className="chat-bubble bot typing-bubble">
                                     <span className="typing-dot" />

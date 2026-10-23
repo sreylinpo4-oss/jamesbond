@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
+import BrandMark from "@/components/BrandMark";
 import { changeCartQuantity, clearCart, getCartCount, useCart } from "@/lib/cart";
 import { saveAppliedPromo, useAppliedPromo } from "@/lib/discounts";
 import { mergeCatalog, products, type Product } from "@/lib/products";
@@ -273,7 +274,7 @@ export default function CheckoutPage() {
     <main className="checkout-shell section-pad">
       <div className="checkout-header">
         <Link href="/" className="brand" aria-label="Floralyn Skin home">
-          <span className="brand-mark">✳</span>
+          <BrandMark />
           <span>
             FLORALYN
             <small>BOTANICAL SKINCARE</small>
@@ -284,7 +285,7 @@ export default function CheckoutPage() {
 
       {cartItems.length === 0 ? (
         <div className="empty-state-card checkout-empty">
-          <span className="story-flower">✳</span>
+          <BrandMark className="story-flower" size={140} />
           <h1>Your bag is empty.</h1>
           <p>Choose a few skin-loving essentials to build your routine.</p>
           <Link href="/" className="button button-dark">Shop the collection</Link>
@@ -294,7 +295,7 @@ export default function CheckoutPage() {
           <form className="checkout-form" onSubmit={handleSubmit}>
             {!isAuthLoading && (
               <div className={`checkout-auth-banner ${currentUser ? "signed-in" : "sign-in-prompt"}`}>
-                <span className="auth-banner-mark">{currentUser ? "✓" : "✿"}</span>
+                <span className="auth-banner-mark">•</span>
                 <div className="auth-banner-content">
                   {currentUser ? (
                     <>
@@ -427,7 +428,7 @@ export default function CheckoutPage() {
               {appliedPromo ? (
                 <div className="promo-applied-tag">
                   <div className="promo-info">
-                    <span className="promo-sparkle">✦</span>
+                    <span className="promo-sparkle">•</span>
                     <div>
                       <strong>{appliedPromo.code}</strong>
                       <small>{appliedPromo.name}</small>

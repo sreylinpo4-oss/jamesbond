@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
+import BrandMark from "@/components/BrandMark";
 import { changeCartQuantity, clearCart, getCartCount, useCart } from "@/lib/cart";
 import { saveAppliedPromo, useAppliedPromo } from "@/lib/discounts";
 import { mergeCatalog, products, type Product } from "@/lib/products";
@@ -146,7 +147,7 @@ export default function CartPage() {
     <main className="page-shell static-page cart-page">
       <header className="detail-header">
         <Link href="/" className="brand" aria-label="Floralyn Skin home">
-          <span className="brand-mark">✳</span>
+          <BrandMark />
           <span>
             FLORALYN
             <small>BOTANICAL SKINCARE</small>
@@ -168,7 +169,7 @@ export default function CartPage() {
 
       {cartItems.length === 0 ? (
         <div className="empty-state-card cart-empty-card">
-          <span className="story-flower">✳</span>
+          <BrandMark className="story-flower" size={140} />
           <h2>Your bag is empty.</h2>
           <p>Pick a few essentials and let your routine bloom.</p>
           <Link href="/" className="button button-dark">Shop the collection</Link>
@@ -212,7 +213,7 @@ export default function CartPage() {
               {appliedPromo ? (
                 <div className="promo-applied-tag">
                   <div className="promo-info">
-                    <span className="promo-sparkle">✦</span>
+                    <span className="promo-sparkle">•</span>
                     <div>
                       <strong>{appliedPromo.code}</strong>
                       <small>{appliedPromo.name}</small>

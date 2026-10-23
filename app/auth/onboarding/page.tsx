@@ -18,7 +18,7 @@ function OnboardingForm() {
     <div className="auth-card">
       <div className="auth-header">
         <Link href="/" className="logo">
-          ✿ Floralyn Skin
+          Floralyn Skin
         </Link>
         <h1>One last step</h1>
         <p>Choose a unique username to complete your profile.</p>

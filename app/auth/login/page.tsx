@@ -25,7 +25,7 @@ function LoginForm() {
     <div className="auth-card">
       <div className="auth-header">
         <Link href="/" className="logo">
-          ✿ Floralyn Skin
+          Floralyn Skin
         </Link>
         <h1>Welcome back</h1>
         <p>Sign in to your Floralyn account to continue.</p>

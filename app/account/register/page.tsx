@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+import BrandMark from "@/components/BrandMark";
 import { defaultProfile, saveAccountProfile } from "@/lib/account";
 
 export default function RegisterPage() {
@@ -29,7 +30,7 @@ export default function RegisterPage() {
     <main className="page-shell static-page">
       <header className="detail-header">
         <Link href="/" className="brand" aria-label="Floralyn Skin home">
-          <span className="brand-mark">✳</span>
+          <BrandMark />
           <span>
             FLORALYN
             <small>BOTANICAL SKINCARE</small>

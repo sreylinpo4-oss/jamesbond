@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense, use, useEffect, useMemo, useState } from "react";
 
+import BrandMark from "@/components/BrandMark";
 import { addToCart, getCartCount, useCart } from "@/lib/cart";
 import { mergeCatalog, products, type Product } from "@/lib/products";
 import { toggleWishlist, useWishlist } from "@/lib/wishlist";
@@ -48,7 +49,7 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
     return (
       <main className="product-shell empty-state-shell">
         <div className="empty-state-card">
-          <span className="story-flower">✳</span>
+          <BrandMark className="story-flower" size={140} />
           <h1>Product not found.</h1>
           <p>This ritual isn&apos;t in our collection yet.</p>
           <Link href="/" className="button button-dark">
@@ -72,7 +73,7 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
     <main className="product-shell">
       <header className="detail-header">
         <Link href="/" className="brand" aria-label="Floralyn Skin home">
-          <span className="brand-mark">✳</span>
+          <BrandMark />
           <span>
             FLORALYN
             <small>BOTANICAL SKINCARE</small>
@@ -103,7 +104,7 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
           <h1>{product.name}</h1>
           {product.role && (
             <div className="product-role-tag" style={{ display: "inline-block", margin: "6px 0 12px" }}>
-              ✦ Role & Function: {product.role}
+              Role & Function: {product.role}
             </div>
           )}
           <p className="detail-price">${product.price.toFixed(2)}</p>
@@ -114,7 +115,7 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
               className={`button button-dark ${addedNotice ? "button-success" : ""}`}
               onClick={handleAddToCart}
             >
-              {addedNotice ? "Added to bag! ✓" : "Add to bag"} <span>↗</span>
+              {addedNotice ? "Added to bag!" : "Add to bag"} <span>↗</span>
             </button>
             <button
               type="button"
@@ -122,9 +123,18 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
               aria-pressed={wishlist.includes(product.id)}
               onClick={() => toggleWishlist(product.id)}
             >
-              <span aria-hidden="true">
-                {wishlist.includes(product.id) ? "♥" : "♡"}
-              </span>
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill={wishlist.includes(product.id) ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden="true"
+                style={{ display: "inline-block", verticalAlign: "middle", marginRight: "6px" }}
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
               {wishlist.includes(product.id)
                 ? "Saved to wishlist"
                 : "Save to wishlist"}

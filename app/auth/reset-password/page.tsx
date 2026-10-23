@@ -15,7 +15,7 @@ function ResetPasswordForm() {
     <div className="auth-card">
       <div className="auth-header">
         <Link href="/" className="logo">
-          ✿ Floralyn Skin
+          Floralyn Skin
         </Link>
         <h1>Set new password</h1>
         <p>Please enter your new password below.</p>

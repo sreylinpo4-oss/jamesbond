@@ -25,7 +25,7 @@ export const categories = [
 
 export const brandFilters = [
   "All",
-  "🇰🇭 Cambodian Heritage",
+  "Cambodian Heritage",
   "Beauty of Joseon",
   "Skin1004",
   "Anua",

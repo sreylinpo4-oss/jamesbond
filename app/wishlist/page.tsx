@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import BrandMark from "@/components/BrandMark";
 import { addToCart } from "@/lib/cart";
 import { products } from "@/lib/products";
 import { toggleWishlist, useWishlist } from "@/lib/wishlist";
@@ -28,7 +29,7 @@ export default function WishlistPage() {
     <main className="page-shell static-page">
       <header className="detail-header">
         <Link href="/" className="brand" aria-label="Floralyn Skin home">
-          <span className="brand-mark">✳</span>
+          <BrandMark />
           <span>
             FLORALYN
             <small>BOTANICAL SKINCARE</small>
@@ -50,7 +51,7 @@ export default function WishlistPage() {
 
       {savedProducts.length === 0 ? (
         <div className="empty-state-card">
-          <span className="story-flower">✳</span>
+          <BrandMark className="story-flower" size={140} />
           <h2>No favorites yet.</h2>
           <p>Save the products that feel like your perfect ritual.</p>
           <Link href="/" className="button button-dark">Browse products</Link>

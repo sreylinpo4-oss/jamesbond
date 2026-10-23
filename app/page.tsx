@@ -4,23 +4,38 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
+import BrandMark from "@/components/BrandMark";
 import { addToCart, changeCartQuantity, getCartCount, useCart } from "@/lib/cart";
 import { saveAppliedPromo, useAppliedPromo } from "@/lib/discounts";
 import { brandFilters, categories, mergeCatalog, products, type Product } from "@/lib/products";
 
 const ritualHighlights = [
     {
-        icon: "✦",
+        icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+            </svg>
+        ),
         title: "Hydrate deeply",
         description: "Plump, cushion, and comfort skin with barrier-loving formulas.",
     },
     {
-        icon: "❋",
+        icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+            </svg>
+        ),
         title: "Calm the day",
         description: "Soft botanicals help ease stress, redness, and afternoon fatigue.",
     },
     {
-        icon: "✿",
+        icon: (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="5" />
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+            </svg>
+        ),
         title: "Glow softly",
         description: "Build a routine that looks fresh, rested, and naturally luminous.",
     },
@@ -90,7 +105,7 @@ export default function Home() {
 
             const matchesBrand =
                 selectedBrand === "All" ||
-                (selectedBrand === "🇰🇭 Cambodian Heritage" && product.origin === "Cambodian Botanical") ||
+                (selectedBrand === "Cambodian Heritage" && product.origin === "Cambodian Botanical") ||
                 (selectedBrand === "Beauty of Joseon" && product.brand === "Beauty of Joseon") ||
                 (selectedBrand === "Skin1004" && product.brand === "Skin1004") ||
                 (selectedBrand === "Anua" && product.brand === "Anua") ||
@@ -201,7 +216,7 @@ export default function Home() {
 
     function addToCartItem(product: Product) {
         addToCart(product.id);
-        setNotice(`${product.name} added to your bag 🌿`);
+        setNotice(`${product.name} added to your bag`);
         window.setTimeout(() => setNotice(""), 2500);
     }
 
@@ -303,7 +318,7 @@ export default function Home() {
     function addPreviewProductToCart() {
         if (!previewProduct) return;
         addToCart(previewProduct.id);
-        setNotice(`${previewProduct.name} added to your bag 🌿`);
+        setNotice(`${previewProduct.name} added to your bag`);
     }
 
     return (
@@ -315,7 +330,7 @@ export default function Home() {
 
             <header className="site-header">
                 <Link href="#home" className="brand" aria-label="Floralyn Skin home">
-                    <span className="brand-mark">✳</span>
+                    <BrandMark />
                     <span>
                         FLORALYN
                         <small>BOTANICAL SKINCARE</small>
@@ -418,7 +433,7 @@ export default function Home() {
                         {currentHeroProduct.role && (
                             <>
                                 <span className="clean-dot">·</span>
-                                <span className="clean-role-tag">✦ Routine Role: {currentHeroProduct.role}</span>
+                                <span className="clean-role-tag">Routine Role: {currentHeroProduct.role}</span>
                             </>
                         )}
                     </div>
@@ -563,7 +578,7 @@ export default function Home() {
                             <div className="floating-seal">
                                 <span className="seal-orbit-ring" />
                                 <span className="seal-label">FLORALYN</span>
-                                <span className="seal-flower">✳</span>
+                                <BrandMark className="seal-flower" size={26} />
                                 <span className="seal-sub">PURE RITUAL</span>
                             </div>
                         </div>
@@ -607,10 +622,10 @@ export default function Home() {
             </section>
 
             <section className="trust-strip">
-                <div><span>✳</span> Nature-inspired care</div>
-                <div><span>✳</span> Gentle daily rituals</div>
-                <div><span>✳</span> Thoughtfully selected ingredients</div>
-                <div><span>✳</span> A little luxury, every day</div>
+                <div><span className="trust-bullet">•</span> Nature-inspired care</div>
+                <div><span className="trust-bullet">•</span> Gentle daily rituals</div>
+                <div><span className="trust-bullet">•</span> Thoughtfully selected ingredients</div>
+                <div><span className="trust-bullet">•</span> A little luxury, every day</div>
             </section>
 
             <section className="ritual-spotlight section-pad">
@@ -720,7 +735,7 @@ export default function Home() {
                                         </div>
                                         {product.role && (
                                             <div className="product-role-line">
-                                                <span className="role-sparkle">✦</span>
+                                                <span className="role-sparkle">•</span>
                                                 <span className="product-role">{product.role}</span>
                                             </div>
                                         )}
@@ -754,7 +769,7 @@ export default function Home() {
                     </div>
                 ) : (
                     <div className="empty-search">
-                        <span>✿</span>
+                        <BrandMark size={32} />
                         <h3>No petals found.</h3>
                         <p>Try another search or choose a different category.</p>
                         <button
@@ -800,7 +815,7 @@ export default function Home() {
             </section>
 
             <section className="story-section section-pad" id="story">
-                <span className="story-flower">✳</span>
+                <BrandMark className="story-flower" size={140} />
                 <div className="eyebrow">A NOTE FROM FLORALYN</div>
                 <h2>Beauty grows when we <em>care gently.</em></h2>
                 <p>
@@ -813,7 +828,7 @@ export default function Home() {
             </section>
 
             <section className="newsletter-section">
-                <div className="newsletter-flower">✿</div>
+                <BrandMark className="newsletter-flower" size={60} />
                 <div>
                     <div className="eyebrow">A LITTLE LOVE IN YOUR INBOX</div>
                     <h2>Notes from our <em>garden.</em></h2>
@@ -836,7 +851,7 @@ export default function Home() {
                 <div className="footer-main">
                     <div className="footer-brand">
                         <Link href="#home" className="brand">
-                            <span className="brand-mark">✳</span>
+                            <BrandMark />
                             <span>FLORALYN<small>BOTANICAL SKINCARE</small></span>
                         </Link>
                         <p>A little nature, a little luxury.<br />Your everyday moment of calm.</p>
@@ -856,19 +871,19 @@ export default function Home() {
                         <Link href="/admin">Store management</Link>
                     </div>
                     <div className="footer-note">
-                        <span>✿</span>
+                        <BrandMark size={16} />
                         <p>Take a breath.<br /><em>You&apos;re blooming just fine.</em></p>
                     </div>
                 </div>
                 <div className="footer-bottom">
                     <span>© 2026 Floralyn Skin. Demo storefront.</span>
-                    <span>Made with care &amp; a little botanical magic ✳</span>
+                    <span>Made with care &amp; a little botanical magic.</span>
                 </div>
             </footer>
 
             {notice && (
                 <div className="toast" role="status">
-                    <span>✿</span> {notice}
+                    {notice}
                     <button onClick={() => setNotice("")} aria-label="Dismiss notification">×</button>
                 </div>
             )}
@@ -890,7 +905,7 @@ export default function Home() {
 
                         {cartItems.length === 0 ? (
                             <div className="cart-empty">
-                                <span>✿</span>
+                                <BrandMark size={36} />
                                 <h3>Your bag is blooming empty.</h3>
                                 <p>Find something lovely for your daily ritual.</p>
                                 <button
@@ -927,7 +942,7 @@ export default function Home() {
                                     {appliedPromo && (
                                         <div className="promo-applied-tag" style={{ marginBottom: "12px" }}>
                                             <div className="promo-info">
-                                                <span className="promo-sparkle">✦</span>
+                                                <span className="promo-sparkle">•</span>
                                                 <div>
                                                     <strong>{appliedPromo.code}</strong>
                                                     <small>{appliedPromo.name}</small>
@@ -1012,7 +1027,7 @@ export default function Home() {
                             <h2 id="product-preview-title">{previewProduct.name}</h2>
                             {previewProduct.role && (
                                 <p className="product-role-tag">
-                                    ✦ Function & Role: {previewProduct.role}
+                                    Function & Role: {previewProduct.role}
                                 </p>
                             )}
                             <strong className="product-preview-price">
