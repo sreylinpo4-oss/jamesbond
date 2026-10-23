@@ -216,7 +216,7 @@ img {
   position: relative;
 }
 
-/* Floating Botanical SVG Petals & Cinematic Bokeh */
+/* Luminous Floating Botanical Starlight & Dew Particles (Crystal Clear) */
 .hero-particles {
   position: absolute;
   inset: 0;
@@ -225,85 +225,93 @@ img {
   z-index: 1;
 }
 
-.petal-svg {
+.sparkle-svg {
   position: absolute;
   will-change: transform, opacity;
   pointer-events: none;
   user-select: none;
+  filter: drop-shadow(0 2px 8px rgba(180, 160, 120, 0.25));
 }
 
-.bokeh-1 {
-  top: 10%;
-  right: 42%;
-  filter: blur(5px);
-  animation: floatBokeh1 24s ease-in-out infinite;
+.sparkle-1 {
+  top: 12%;
+  left: 8%;
+  animation: floatSparkle1 7s ease-in-out infinite alternate;
 }
 
-.bokeh-2 {
-  bottom: 12%;
-  right: 28%;
-  filter: blur(6px);
-  animation: floatBokeh2 20s ease-in-out infinite;
+.sparkle-2 {
+  top: 72%;
+  left: 5%;
+  animation: floatSparkle2 9s ease-in-out infinite alternate;
 }
 
-.leaf-1 {
-  top: 14%;
-  left: 6%;
-  animation: floatLeaf1 18s ease-in-out infinite;
+.sparkle-3 {
+  top: 42%;
+  left: 45%;
+  animation: floatSparkle3 8s ease-in-out infinite alternate;
 }
 
-.petal-2 {
-  top: 68%;
-  left: 3%;
-  animation: floatPetal2 22s ease-in-out infinite;
+.dewdrop-1 {
+  top: 15%;
+  left: 48%;
+  animation: floatDew1 11s ease-in-out infinite alternate;
 }
 
-.leaf-3 {
-  top: 78%;
-  right: 8%;
-  animation: floatLeaf3 26s ease-in-out infinite;
+.dewdrop-2 {
+  bottom: 8%;
+  right: 6%;
+  animation: floatDew2 10s ease-in-out infinite alternate;
 }
 
-.petal-4 {
-  top: 36%;
-  right: 12%;
-  animation: floatPetal4 19s ease-in-out infinite;
+@keyframes floatSparkle1 {
+  0% { transform: translateY(0px) rotate(0deg) scale(0.9); opacity: 0.55; }
+  50% { transform: translateY(-16px) rotate(45deg) scale(1.15); opacity: 0.95; }
+  100% { transform: translateY(6px) rotate(90deg) scale(0.85); opacity: 0.6; }
 }
 
-@keyframes floatLeaf1 {
-  0% { transform: translateY(0px) rotate(12deg) scale(1); opacity: 0.35; }
-  35% { transform: translateY(-30px) translateX(14px) rotate(48deg) scale(1.05); opacity: 0.55; }
-  70% { transform: translateY(-16px) translateX(-10px) rotate(85deg) scale(0.95); opacity: 0.4; }
-  100% { transform: translateY(0px) rotate(12deg) scale(1); opacity: 0.35; }
+@keyframes floatSparkle2 {
+  0% { transform: translateY(0px) rotate(0deg) scale(0.85); opacity: 0.5; }
+  50% { transform: translateY(-22px) rotate(-35deg) scale(1.1); opacity: 0.85; }
+  100% { transform: translateY(8px) rotate(-70deg) scale(0.9); opacity: 0.45; }
 }
 
-@keyframes floatPetal2 {
-  0% { transform: translateY(0px) translateX(0px) rotate(-20deg); opacity: 0.3; }
-  50% { transform: translateY(-36px) translateX(20px) rotate(45deg); opacity: 0.5; }
-  100% { transform: translateY(0px) translateX(0px) rotate(-20deg); opacity: 0.3; }
+@keyframes floatSparkle3 {
+  0% { transform: translateY(0px) scale(0.9); opacity: 0.4; }
+  50% { transform: translateY(-14px) scale(1.25); opacity: 0.8; }
+  100% { transform: translateY(4px) scale(0.85); opacity: 0.4; }
 }
 
-@keyframes floatLeaf3 {
-  0% { transform: translateY(0px) rotate(55deg); opacity: 0.32; }
-  45% { transform: translateY(28px) translateX(-18px) rotate(10deg); opacity: 0.5; }
-  85% { transform: translateY(-20px) translateX(12px) rotate(70deg); opacity: 0.38; }
-  100% { transform: translateY(0px) rotate(55deg); opacity: 0.32; }
+@keyframes floatDew1 {
+  0% { transform: translateY(0) scale(1); opacity: 0.45; }
+  50% { transform: translateY(-18px) translateX(10px) scale(1.12); opacity: 0.75; }
+  100% { transform: translateY(0) scale(1); opacity: 0.45; }
 }
 
-@keyframes floatPetal4 {
-  0% { transform: translateY(0px) rotate(-35deg); opacity: 0.35; }
-  50% { transform: translateY(-26px) translateX(-16px) rotate(15deg); opacity: 0.52; }
-  100% { transform: translateY(0px) rotate(-35deg); opacity: 0.35; }
+@keyframes floatDew2 {
+  0% { transform: translateY(0) scale(1); opacity: 0.4; }
+  50% { transform: translateY(-20px) translateX(-12px) scale(1.15); opacity: 0.8; }
+  100% { transform: translateY(0) scale(1); opacity: 0.4; }
 }
 
-@keyframes floatBokeh1 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.22; }
-  50% { transform: translate(24px, -32px) scale(1.2); opacity: 0.45; }
+/* Shimmering Metallic Rose-Gold & Forest Gradient */
+.bloom-gradient-text {
+  background: linear-gradient(
+    115deg,
+    #2c3827 0%,
+    #4a6345 35%,
+    #b38b4d 50%,
+    #4a6345 65%,
+    #2c3827 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: bloomTextSheen 8s ease-in-out infinite alternate;
 }
 
-@keyframes floatBokeh2 {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.18; }
-  50% { transform: translate(-28px, 22px) scale(1.15); opacity: 0.38; }
+@keyframes bloomTextSheen {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 
 /* Hero Copy Entrance Staggers */
@@ -726,35 +734,73 @@ h2 em {
   will-change: transform;
 }
 
-/* Ambient Pulsing Aura Behind Product */
+/* Crystalline Luminous Ambient Halo (Clean & Centered, Zero Murkiness) */
 .hero-ambient-glow {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 400px;
-  height: 440px;
+  width: 440px;
+  height: 500px;
+  border-radius: 50%;
   background: radial-gradient(
     ellipse at center,
-    rgba(195, 212, 183, 0.58) 0%,
-    rgba(220, 228, 213, 0.32) 45%,
-    transparent 72%
+    rgba(182, 203, 172, 0.38) 0%,
+    rgba(235, 220, 198, 0.24) 40%,
+    rgba(195, 215, 185, 0.12) 65%,
+    transparent 78%
   );
-  filter: blur(42px);
+  filter: blur(32px);
   pointer-events: none;
   z-index: 1;
-  transform: translateZ(-35px);
-  animation: heroGlowPulse 7s ease-in-out infinite alternate;
+  transform: translate(-50%, -50%) translateZ(-35px);
+  animation: heroGlowPulse 8s ease-in-out infinite alternate;
 }
 
 @keyframes heroGlowPulse {
   0% {
-    transform: translate(-50%, -50%) scale(0.92) translateZ(-35px);
-    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.95) translateZ(-35px);
+    opacity: 0.65;
   }
   100% {
-    transform: translate(-50%, -50%) scale(1.18) translateZ(-35px);
-    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.12) translateZ(-35px);
+    opacity: 0.95;
   }
+}
+
+/* Traveling Conic Light Beam Border Around Arched Frame */
+.hero-border-beam-wrap {
+  position: absolute;
+  inset: -3px;
+  border-radius: 48% 48% 6px 6px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  transform: translateZ(12px);
+  opacity: 0.85;
+}
+
+.hero-border-beam-spinner {
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 60deg,
+    rgba(215, 185, 130, 0.7) 90deg,
+    rgba(255, 255, 255, 0.95) 100deg,
+    rgba(95, 140, 105, 0.85) 120deg,
+    transparent 160deg,
+    transparent 360deg
+  );
+  animation: beamRotate 7s linear infinite;
+}
+
+@keyframes beamRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .hero-image-frame {
@@ -765,19 +811,22 @@ h2 em {
   max-height: 540px;
   border-radius: 48% 48% 4px 4px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.9);
   box-shadow:
-    0 26px 52px -12px rgba(44, 56, 39, 0.18),
-    0 10px 24px -6px rgba(44, 56, 39, 0.08);
-  z-index: 2;
+    0 24px 48px -12px rgba(44, 56, 39, 0.16),
+    0 8px 20px -4px rgba(44, 56, 39, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  z-index: 3;
   transform: translateZ(15px);
   transform-style: preserve-3d;
-  transition: box-shadow 0.4s ease;
+  transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hero-image-frame:hover {
   box-shadow:
-    0 32px 64px -14px rgba(44, 56, 39, 0.24),
-    0 14px 30px -6px rgba(44, 56, 39, 0.12);
+    0 34px 68px -14px rgba(44, 56, 39, 0.22),
+    0 16px 32px -6px rgba(44, 56, 39, 0.12),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.9);
 }
 
 .hero-image-animated {
@@ -787,19 +836,19 @@ h2 em {
   max-height: 540px;
   object-fit: cover;
   object-position: center;
-  animation: heroImageReveal 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: heroImageReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes heroImageReveal {
   0% {
-    opacity: 0.2;
-    transform: scale(1.06);
-    filter: blur(6px);
+    opacity: 0.15;
+    transform: scale(1.05);
+    filter: brightness(1.08) blur(4px);
   }
   100% {
     opacity: 1;
     transform: scale(1);
-    filter: blur(0px);
+    filter: brightness(1) blur(0px);
   }
 }
 
@@ -820,23 +869,28 @@ h2 em {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.0) 55%,
-    rgba(34, 46, 37, 0.25) 100%
+    rgba(34, 46, 37, 0.22) 100%
   );
   pointer-events: none;
 }
 
-/* Interactive Feature Hotspot Pins */
+/* Interactive Feature Hotspot Pins (Double Wave Radar) */
 .hero-hotspot {
   position: absolute;
   z-index: 7;
   cursor: pointer;
   pointer-events: auto;
-  transform: translateZ(40px);
+  transform: translateZ(45px);
+  transition: transform 0.25s ease;
+}
+
+.hero-hotspot:hover {
+  transform: translateZ(55px) scale(1.1);
 }
 
 .hotspot-trigger {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: transparent;
   border: 0;
@@ -848,19 +902,21 @@ h2 em {
 }
 
 .hotspot-dot {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: #fffef9;
+  background: #ffffff;
   border: 2.5px solid var(--forest);
-  box-shadow: 0 0 10px rgba(52, 72, 58, 0.45);
-  transition: transform 0.25s ease, background 0.25s ease;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 4px 12px rgba(34, 46, 37, 0.35);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease;
 }
 
 .hero-hotspot:hover .hotspot-dot,
 .hero-hotspot.active .hotspot-dot {
   transform: scale(1.35);
-  background: var(--sage);
+  background: #ecd8b4;
   border-color: #243629;
 }
 
@@ -872,8 +928,12 @@ h2 em {
   animation: radarPing 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+.hotspot-pulse.pulse-delay {
+  animation-delay: 1.2s;
+}
+
 @keyframes radarPing {
-  0% { transform: scale(0.6); opacity: 1; }
+  0% { transform: scale(0.6); opacity: 0.9; }
   100% { transform: scale(2.6); opacity: 0; }
 }
 
@@ -982,56 +1042,82 @@ h2 em {
   transform: scale(0.96);
 }
 
-/* Floating Rotating Seal */
+/* Floating Rotating Ritual Seal (3D z-depth) */
 .floating-seal-wrapper {
   position: absolute;
   top: 14px;
   right: -24px;
-  z-index: 5;
-  transform: translateZ(55px);
-  animation: sealBob 5s ease-in-out infinite alternate;
+  z-index: 6;
+  transform: translateZ(60px);
+  animation: sealBob 6s ease-in-out infinite alternate;
 }
 
 .floating-seal {
   position: relative;
-  top: auto;
-  right: auto;
-  width: 96px;
-  height: 96px;
+  width: 100px;
+  height: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  border: 1.5px dashed #97a88d;
+  gap: 3px;
   border-radius: 50%;
-  background: rgba(250, 248, 241, 0.95);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(195, 212, 183, 0.7);
+  box-shadow:
+    0 12px 32px rgba(44, 56, 39, 0.12),
+    0 2px 6px rgba(44, 56, 39, 0.04),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+
+.floating-seal:hover {
+  transform: scale(1.08) rotate(5deg);
+  box-shadow: 0 18px 40px rgba(44, 56, 39, 0.18);
+}
+
+.seal-orbit-ring {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px dashed rgba(150, 168, 140, 0.55);
+  animation: sealRingSpin 24s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes sealRingSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.seal-label {
+  font-family: "DM Sans", sans-serif;
+  font-size: 8px;
+  letter-spacing: 2px;
   color: var(--forest);
-  font-size: 7.5px;
-  letter-spacing: 1.2px;
-  font-weight: 600;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 24px rgba(44, 56, 39, 0.12);
-  animation: sealSpin 26s linear infinite;
-  transform-origin: center center;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .seal-flower {
-  font-size: 26px;
-  color: var(--sage-dark);
+  font-size: 20px;
+  color: #a08044;
   line-height: 1;
   animation: sealPulse 3s ease-in-out infinite alternate;
 }
 
-@keyframes sealBob {
-  0% { transform: translateY(0px) rotate(8deg); }
-  50% { transform: translateY(-12px) rotate(14deg); }
-  100% { transform: translateY(0px) rotate(8deg); }
+.seal-sub {
+  font-size: 7px;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  font-weight: 600;
 }
 
-@keyframes sealSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes sealBob {
+  0% { transform: translateY(0px) rotate(4deg); }
+  50% { transform: translateY(-10px) rotate(8deg); }
+  100% { transform: translateY(0px) rotate(4deg); }
 }
 
 @keyframes sealPulse {
@@ -5627,3 +5713,210 @@ h2 em {
   }
 }
 
+
+
+/* Dynamic Hero Text Board Elements */
+.hero-active-role-board {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(220, 228, 213, 0.55);
+  border: 1px solid rgba(135, 151, 125, 0.55);
+  border-radius: 999px;
+  margin: 10px 0 16px;
+  font-size: 11.5px;
+  color: var(--forest);
+  box-shadow: 0 4px 14px rgba(44, 56, 39, 0.06);
+  animation: heroFadeUp 0.4s ease both;
+}
+
+.hero-active-role-board .role-sparkle {
+  color: #a08044;
+  font-size: 13px;
+}
+
+.hero-active-role-board .role-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #4a5d42;
+  text-transform: uppercase;
+}
+
+.hero-active-role-board .role-value {
+  color: var(--forest);
+  font-weight: 700;
+}
+
+.hero-origin-pill {
+  font-size: 8.5px;
+  letter-spacing: 0.8px;
+  color: var(--forest);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(220, 228, 213, 0.8);
+  font-weight: 600;
+}
+
+.hero-dynamic-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin: 12px 0 20px;
+}
+
+.hero-benefit-item {
+  font-size: 11px;
+  color: var(--forest);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(220, 228, 213, 0.85);
+  padding: 4px 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(44, 56, 39, 0.04);
+}
+
+.hero-benefit-item .check-bullet {
+  color: #4c6351;
+  font-weight: 800;
+}
+
+.badge-role-pill {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--forest);
+  background: rgba(220, 228, 213, 0.6);
+  border: 1px solid rgba(135, 151, 125, 0.4);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin: 6px 0 4px;
+  display: inline-block;
+  letter-spacing: 0.3px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* Clean Luxury Hero Typography & Elements */
+.hero-clean-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  background: rgba(220, 228, 213, 0.45);
+  border: 1px solid rgba(135, 151, 125, 0.35);
+  border-radius: 999px;
+  font-size: 11px;
+  backdrop-filter: blur(10px);
+  max-width: 100%;
+}
+
+.clean-brand-tag {
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--forest);
+  font-size: 10.5px;
+  flex-shrink: 0;
+}
+
+.clean-dot {
+  color: rgba(135, 151, 125, 0.65);
+  font-size: 12px;
+}
+
+.clean-role-tag {
+  font-weight: 600;
+  color: #3b4e3f;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-copy .hero-product-title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(30px, 3.5vw, 46px);
+  font-weight: 500;
+  letter-spacing: -1.2px;
+  line-height: 1.18;
+  color: var(--forest);
+  margin: 18px 0 14px;
+  max-width: 520px;
+}
+
+.hero-product-desc {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: #556253;
+  max-width: 480px;
+  margin: 0 0 22px;
+}
+
+.hero-clean-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-bottom: 30px;
+}
+
+.clean-benefit-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--forest);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(220, 228, 213, 0.85);
+  padding: 5px 13px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(44, 56, 39, 0.03);
+}
+
+.clean-benefit-item .clean-check {
+  color: #4a754f;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.hero-clean-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.button-clean-ghost {
+  min-height: 48px;
+  padding: 0 24px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--forest);
+  border: 1px solid rgba(135, 151, 125, 0.4);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 2px;
+  backdrop-filter: blur(8px);
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.button-clean-ghost:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--forest);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(44, 56, 39, 0.08);
+}

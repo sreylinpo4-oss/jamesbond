@@ -92,6 +92,7 @@ export default function Home() {
                 selectedBrand === "All" ||
                 (selectedBrand === "🇰🇭 Cambodian Heritage" && product.origin === "Cambodian Botanical") ||
                 (selectedBrand === "Beauty of Joseon" && product.brand === "Beauty of Joseon") ||
+                (selectedBrand === "Skin1004" && product.brand === "Skin1004") ||
                 (selectedBrand === "Anua" && product.brand === "Anua") ||
                 (selectedBrand === "Mary & May" && product.brand === "Mary & May") ||
                 (selectedBrand === "K-Beauty Hits" && (product.origin === "Korean Skincare" || ["Skin1004", "Round Lab", "COSRX"].includes(product.brand))) ||
@@ -159,11 +160,36 @@ export default function Home() {
             .catch(() => {});
     }, [subtotal, cart, appliedCode, appliedPromo?.name]);
 
+    const HERO_STAR_IDS = [29, 17, 33, 1, 30]; // Skin1004 Sun Serum, Anua 77% Toner, Mary & May Blackberry, Dew Drop Serum, Skin1004 Poremizing
     const heroProducts = useMemo(() => {
-        return catalog.length > 0 ? catalog.slice(0, 4) : products.slice(0, 4);
+        const curated = HERO_STAR_IDS.map((id) => catalog.find((p) => p.id === id)).filter(Boolean) as Product[];
+        return curated.length > 0 ? curated : (catalog.length > 0 ? catalog.slice(0, 5) : products.slice(0, 5));
     }, [catalog]);
 
     const currentHeroProduct = heroProducts[heroIndex] || heroProducts[0];
+
+    const activeHotspots = useMemo(() => {
+        const b1 = currentHeroProduct?.benefits?.[0] || "Botanical Formulation";
+        const b2 = currentHeroProduct?.benefits?.[1] || "Clinical Barrier Defense";
+        return [
+            {
+                id: 1,
+                top: "32%",
+                left: "66%",
+                tag: currentHeroProduct?.tag || "ACTIVE",
+                title: b1,
+                desc: `Formulated with high-potency actives to deliver ${b1.toLowerCase()} and lasting skin comfort.`,
+            },
+            {
+                id: 2,
+                top: "66%",
+                left: "30%",
+                tag: "TARGETED ROLE",
+                title: b2,
+                desc: `Designated routine role: ${currentHeroProduct?.role || "Barrier restoration"}.`,
+            },
+        ];
+    }, [currentHeroProduct]);
 
     useEffect(() => {
         if (isHeroPaused || heroProducts.length <= 1) return;
@@ -338,150 +364,95 @@ export default function Home() {
             </header>
 
             <section className="hero" id="home">
-                {/* Floating cinematic botanical SVG petals & bokeh */}
+                {/* Floating luminous botanical sparkles & dewdrops (crystal clear) */}
                 <div className="hero-particles" aria-hidden="true">
-                    <div className="petal-svg bokeh-1">
-                        <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-                            <circle cx="30" cy="30" r="28" fill="url(#bokehGrad1)" />
+                    <div className="sparkle-svg sparkle-1">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 0C12 7 7 12 0 12C7 12 12 17 12 24C12 17 17 12 24 12C17 12 12 7 12 0Z" fill="url(#sparkleGrad1)" />
                             <defs>
-                                <radialGradient id="bokehGrad1" cx="50%" cy="50%" r="50%">
-                                    <stop offset="0%" stopColor="#dce4d5" stopOpacity="0.55" />
-                                    <stop offset="100%" stopColor="#dce4d5" stopOpacity="0" />
-                                </radialGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                    <div className="petal-svg bokeh-2">
-                        <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
-                            <circle cx="35" cy="35" r="32" fill="url(#bokehGrad2)" />
-                            <defs>
-                                <radialGradient id="bokehGrad2" cx="50%" cy="50%" r="50%">
-                                    <stop offset="0%" stopColor="#edd8ce" stopOpacity="0.45" />
-                                    <stop offset="100%" stopColor="#edd8ce" stopOpacity="0" />
-                                </radialGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                    <div className="petal-svg leaf-1">
-                        <svg width="34" height="46" viewBox="0 0 34 46" fill="none">
-                            <path d="M17 2C7 16 7 30 17 44C27 30 27 16 17 2Z" fill="url(#leafGrad1)" />
-                            <path d="M17 7L17 39" stroke="rgba(255,255,255,0.45)" strokeWidth="1" strokeLinecap="round" />
-                            <defs>
-                                <linearGradient id="leafGrad1" x1="17" y1="2" x2="17" y2="44" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#87977d" stopOpacity="0.5" />
-                                    <stop offset="1" stopColor="#4c6351" stopOpacity="0.35" />
+                                <linearGradient id="sparkleGrad1" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#dfcb9e" stopOpacity="0.85" />
+                                    <stop offset="1" stopColor="#a3b499" stopOpacity="0.4" />
                                 </linearGradient>
                             </defs>
                         </svg>
                     </div>
-                    <div className="petal-svg petal-2">
-                        <svg width="30" height="34" viewBox="0 0 30 34" fill="none">
-                            <path d="M15 3C9 3 4 8 4 16C4 24 15 32 15 32C15 32 26 24 26 16C26 8 21 3 15 3Z" fill="url(#petalGrad1)" />
+
+                    <div className="sparkle-svg sparkle-2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 0C12 7 7 12 0 12C7 12 12 17 12 24C12 17 17 12 24 12C17 12 12 7 12 0Z" fill="url(#sparkleGrad2)" />
                             <defs>
-                                <linearGradient id="petalGrad1" x1="15" y1="3" x2="15" y2="32" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#d8b4a6" stopOpacity="0.48" />
-                                    <stop offset="1" stopColor="#c5a193" stopOpacity="0.3" />
+                                <linearGradient id="sparkleGrad2" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#ecd8b4" stopOpacity="0.75" />
+                                    <stop offset="1" stopColor="#b5c4ad" stopOpacity="0.3" />
                                 </linearGradient>
                             </defs>
                         </svg>
                     </div>
-                    <div className="petal-svg leaf-3">
-                        <svg width="28" height="38" viewBox="0 0 28 38" fill="none">
-                            <path d="M14 2C6 13 6 25 14 36C22 25 22 13 14 2Z" fill="url(#leafGrad2)" />
-                            <defs>
-                                <linearGradient id="leafGrad2" x1="14" y1="2" x2="14" y2="36" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#a3b499" stopOpacity="0.5" />
-                                    <stop offset="1" stopColor="#7a8d71" stopOpacity="0.32" />
-                                </linearGradient>
-                            </defs>
+
+                    <div className="sparkle-svg sparkle-3">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 0C12 7 7 12 0 12C7 12 12 17 12 24C12 17 17 12 24 12C17 12 12 7 12 0Z" fill="url(#sparkleGrad1)" />
                         </svg>
                     </div>
-                    <div className="petal-svg petal-4">
-                        <svg width="24" height="28" viewBox="0 0 24 28" fill="none">
-                            <path d="M12 2C7 2 3 6 3 13C3 20 12 26 12 26C12 26 21 20 21 13C21 6 17 2 12 2Z" fill="url(#goldGrad)" />
-                            <defs>
-                                <linearGradient id="goldGrad" x1="12" y1="2" x2="12" y2="26" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#dfcb9e" stopOpacity="0.5" />
-                                    <stop offset="1" stopColor="#baa77b" stopOpacity="0.25" />
-                                </linearGradient>
-                            </defs>
+
+                    <div className="sparkle-svg dewdrop-1">
+                        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                            <circle cx="11" cy="11" r="9" stroke="rgba(163, 180, 154, 0.45)" strokeWidth="1.5" strokeDasharray="2 3" />
+                            <circle cx="11" cy="11" r="4" fill="rgba(223, 203, 158, 0.6)" />
+                        </svg>
+                    </div>
+
+                    <div className="sparkle-svg dewdrop-2">
+                        <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                            <circle cx="13" cy="13" r="11" stroke="rgba(223, 203, 158, 0.4)" strokeWidth="1.2" />
+                            <circle cx="13" cy="13" r="5" fill="rgba(163, 180, 154, 0.5)" />
                         </svg>
                     </div>
                 </div>
 
                 <div className="hero-copy">
-                    <div className="hero-editorial-meta hero-fade-up">
-                        <span className="editorial-counter">
-                            0{heroIndex + 1} <small>/ 0{heroProducts.length}</small>
-                        </span>
-                        <span className="meta-divider">|</span>
-                        <span className="batch-status-badge">
-                            <span className="live-status-dot" />
-                            COLD-PRESSED SMALL BATCH
-                        </span>
+                    {/* Clean editorial meta with brand & routine role */}
+                    <div className="hero-clean-meta hero-fade-up">
+                        <span className="clean-brand-tag">{currentHeroProduct.brand}</span>
+                        {currentHeroProduct.role && (
+                            <>
+                                <span className="clean-dot">·</span>
+                                <span className="clean-role-tag">✦ Routine Role: {currentHeroProduct.role}</span>
+                            </>
+                        )}
                     </div>
 
-                    <div className="eyebrow hero-fade-up">
-                        <span className="eyebrow-line" />
-                        <span>YOUR DAILY MOMENT OF CALM</span>
-                    </div>
-                    <h1 className="hero-fade-up hero-delay-1">
-                        Let your skin
-                        <br />
-                        <span className="bloom-gradient-text"><em>bloom naturally.</em></span>
+                    <h1 className="hero-product-title hero-fade-up hero-delay-1" key={`h1-${currentHeroProduct.id}`}>
+                        {currentHeroProduct.name.split(" - ")[1] || currentHeroProduct.name}
                     </h1>
-                    <p className="hero-description hero-fade-up hero-delay-2">
-                        Thoughtful skincare inspired by nature. Gentle rituals, botanical
-                        ingredients, and a little everyday luxury for your skin.
+
+                    <p className="hero-product-desc hero-fade-up hero-delay-2" key={`desc-${currentHeroProduct.id}`}>
+                        {currentHeroProduct.description}
                     </p>
 
-                    {/* Featured product spotlight tabs */}
-                    <div className="hero-product-chips hero-fade-up hero-delay-2" role="tablist" aria-label="Featured skincare essentials">
-                        <span className="chips-label">Spotlight:</span>
-                        {heroProducts.map((p, idx) => (
-                            <button
-                                key={p.id}
-                                role="tab"
-                                type="button"
-                                aria-selected={idx === heroIndex}
-                                className={idx === heroIndex ? "hero-chip active" : "hero-chip"}
-                                onClick={() => setHeroIndex(idx)}
-                            >
-                                <span className="chip-dot" />
-                                {p.name}
-                            </button>
+                    {/* Key formula highlights */}
+                    <div className="hero-clean-benefits hero-fade-up hero-delay-2" key={`benefits-${currentHeroProduct.id}`}>
+                        {currentHeroProduct.benefits.slice(0, 3).map((benefit, i) => (
+                            <span key={i} className="clean-benefit-item">
+                                <span className="clean-check">✓</span> {benefit}
+                            </span>
                         ))}
                     </div>
 
-                    <div className="hero-buttons hero-fade-up hero-delay-3">
-                        <a className="button button-dark hero-cta-button" href="#shop">
-                            Discover your ritual <span>↗</span>
+                    {/* Clean primary actions */}
+                    <div className="hero-clean-actions hero-fade-up hero-delay-3">
+                        <button
+                            type="button"
+                            className="button button-dark hero-cta-button"
+                            onClick={() => addToCartItem(currentHeroProduct)}
+                        >
+                            Add to bag <span>+</span>
+                        </button>
+                        <a className="button button-clean-ghost" href="#shop">
+                            Explore catalog <span>↓</span>
                         </a>
-                        <a className="text-link" href="#story">
-                            Our philosophy ↗
-                        </a>
                     </div>
-
-                    <div className="hero-social-proof hero-fade-up hero-delay-4">
-                        <div className="proof-avatars">
-                            <span className="proof-avatar">🌿</span>
-                            <span className="proof-avatar">🌸</span>
-                            <span className="proof-avatar">✨</span>
-                        </div>
-                        <div className="proof-content">
-                            <div className="proof-stars">★★★★★ <strong>4.9/5 Rating</strong></div>
-                            <p>&ldquo;My routine transformed within 3 days. Pure botanical magic.&rdquo;</p>
-                        </div>
-                    </div>
-
-                    <div className="hero-note hero-fade-up hero-delay-4">
-                        <span className="note-icon">✳</span>
-                        <span>
-                            <strong>Less, but more intentional.</strong>
-                            <small>Skincare that feels like a deep breath.</small>
-                        </span>
-                    </div>
-                    <span className="hero-decoration hero-fade-up hero-delay-4">grow gently · glow softly</span>
                 </div>
 
                 <div
@@ -498,15 +469,20 @@ export default function Home() {
                         className="hero-3d-card"
                         style={{
                             transform: isHovered
-                                ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`
-                                : "perspective(1000px) rotateX(0deg) rotateY(0deg)",
+                                ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.02, 1.02, 1.02)`
+                                : "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
                             transition: isHovered
                                 ? "transform 0.12s cubic-bezier(0.2, 0, 0, 1)"
-                                : "transform 0.65s cubic-bezier(0.16, 1, 0.3, 1)",
+                                : "transform 0.75s cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                     >
-                        {/* Glowing ambient radial aura (deep Z-depth) */}
+                        {/* Crystalline luminous ambient halo (clean & centered) */}
                         <div className="hero-ambient-glow" aria-hidden="true" />
+
+                        {/* Interactive Traveling Conic Light Beam Border */}
+                        <div className="hero-border-beam-wrap" aria-hidden="true">
+                            <div className="hero-border-beam-spinner" />
+                        </div>
 
                         {/* Active product image with smooth crossfade and keyframe entrance */}
                         <div className="hero-image-frame" key={currentHeroProduct?.id || heroIndex}>
@@ -523,15 +499,15 @@ export default function Home() {
                             <div
                                 className="hero-specular-sheen"
                                 style={{
-                                    background: `radial-gradient(circle 280px at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 80%)`,
-                                    opacity: isHovered ? 1 : 0.25,
+                                    background: `radial-gradient(circle 320px at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.15) 35%, transparent 75%)`,
+                                    opacity: isHovered ? 1 : 0.3,
                                 }}
                             />
 
                             <div className="hero-image-overlay" />
 
                             {/* Interactive Feature Hotspot Pins */}
-                            {productHotspots.map((spot) => (
+                            {activeHotspots.map((spot) => (
                                 <div
                                     key={spot.id}
                                     className={`hero-hotspot ${activeHotspot === spot.id ? "active" : ""}`}
@@ -549,6 +525,7 @@ export default function Home() {
                                         aria-label={`Explore ${spot.title}`}
                                     >
                                         <span className="hotspot-pulse" />
+                                        <span className="hotspot-pulse pulse-delay" />
                                         <span className="hotspot-dot" />
                                     </button>
 
@@ -584,70 +561,12 @@ export default function Home() {
                         {/* Floating Rotating Ritual Seal (3D z-depth) */}
                         <div className="floating-seal-wrapper">
                             <div className="floating-seal">
-                                <span>YOUR SKIN</span>
+                                <span className="seal-orbit-ring" />
+                                <span className="seal-label">FLORALYN</span>
                                 <span className="seal-flower">✳</span>
-                                <span>YOUR RITUAL</span>
+                                <span className="seal-sub">PURE RITUAL</span>
                             </div>
                         </div>
-
-                        {/* Interactive Animated Product Spotlight Card (Forefront 3D pop) */}
-                        {currentHeroProduct && (
-                            <div className="hero-product-badge" key={`badge-${currentHeroProduct.id}`}>
-                                <div className="badge-header">
-                                    <span className="badge-tag">{currentHeroProduct.tag}</span>
-                                    <span className="badge-rating">
-                                        ★ 4.9 <small>(120+)</small>
-                                    </span>
-                                </div>
-
-                                <div className="badge-body">
-                                    <Link
-                                        href={`/product/${currentHeroProduct.id}`}
-                                        onClick={(e) => openProductPreview(e, currentHeroProduct)}
-                                        className="badge-title"
-                                        aria-haspopup="dialog"
-                                    >
-                                        {currentHeroProduct.name}
-                                    </Link>
-                                    <span className="badge-category">{currentHeroProduct.category}</span>
-                                </div>
-
-                                <div className="badge-benefits">
-                                    {currentHeroProduct.benefits.slice(0, 2).map((benefit, i) => (
-                                        <span key={i} className="benefit-pill">
-                                            ✓ {benefit}
-                                        </span>
-                                    ))}
-                                </div>
-
-                                <div className="badge-footer">
-                                    <span className="badge-price">${currentHeroProduct.price.toFixed(2)}</span>
-                                    <div className="badge-btn-wrap">
-                                        <button
-                                            type="button"
-                                            className={`badge-add-btn ${heroAddedNotice ? "added" : ""}`}
-                                            onClick={(e) => handleHeroQuickAdd(e, currentHeroProduct)}
-                                            aria-label={`Add ${currentHeroProduct.name} to bag`}
-                                        >
-                                            {heroAddedNotice ? "Added 🌿" : "Add to bag +"}
-                                        </button>
-                                        {/* Sparkle burst particles */}
-                                        {sparkles.map((sp) => (
-                                            <span
-                                                key={sp.id}
-                                                className="sparkle-particle"
-                                                style={{
-                                                    "--tx": `${sp.x}px`,
-                                                    "--ty": `${sp.y}px`,
-                                                } as React.CSSProperties}
-                                            >
-                                                ✦
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* Carousel Thumbnail Gallery Dock & Progress Indicators */}
@@ -670,7 +589,6 @@ export default function Home() {
                                         height={44}
                                         className="indicator-thumb-img"
                                     />
-                                    <span className="indicator-thumb-price">${p.price}</span>
                                 </div>
                                 <span className="indicator-track">
                                     <span
@@ -817,7 +735,6 @@ export default function Home() {
                                         </h3>
                                         <p>{product.description}</p>
                                     </div>
-                                    <strong className="product-price">${product.price.toFixed(2)}</strong>
                                 </div>
                                 <div className="product-card-actions">
                                     <button className="add-button" onClick={() => addToCartItem(product)}>

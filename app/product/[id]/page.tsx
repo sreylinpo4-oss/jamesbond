@@ -165,7 +165,6 @@ function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
                     <h3>{item.name}</h3>
                     <p>{item.description}</p>
                   </div>
-                  <strong className="product-price">${item.price.toFixed(2)}</strong>
                 </div>
                 <Link className="add-button" href={`/product/${item.id}`}>
                   View product <span>↗</span>

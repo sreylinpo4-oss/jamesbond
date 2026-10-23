@@ -69,7 +69,6 @@ export default function WishlistPage() {
                   <h3>{product.name}</h3>
                   <p>{product.description}</p>
                 </div>
-                <strong className="product-price">${product.price.toFixed(2)}</strong>
               </div>
               <div className="product-card-actions">
                 <button type="button" className="add-button" onClick={() => handleAddToCart(product.id)}>

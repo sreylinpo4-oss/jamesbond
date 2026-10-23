@@ -110,6 +110,28 @@ export default async function AccountPage() {
               </span>
             </div>
 
+            {profile?.role === "admin" && (
+              <div style={{ marginTop: "10px", marginBottom: "6px" }}>
+                <Link
+                  href="/admin"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "var(--forest, #34483a)",
+                    color: "#ffffff",
+                    padding: "8px 14px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  ⚙️ Open Store Admin Portal ↗
+                </Link>
+              </div>
+            )}
+
             <div className="detail-item">
               <span className="detail-label">Member Since</span>
               <span className="detail-value">{joinedDate}</span>
